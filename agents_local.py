@@ -64,7 +64,7 @@ def comment_generator(code_diff,max_new_tokens = 256):
 
 
 def code_refiner(code_diff, comment,oldf="", max_new_tokens = 256):
-    generator = reviewer_generator
+    generator = developer_generator
     tokenizer = AutoTokenizer.from_pretrained("deepseek-ai/deepseek-coder-6.7b-instruct", use_fast=True)
 
     # ======= BUILD PROMPT =======
