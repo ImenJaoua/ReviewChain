@@ -1,0 +1,50 @@
+[
+  {
+    "role": "Reviewer",
+    "message": "I think that this should be `d[2] = 2.0`.\n"
+  },
+  {
+    "role": "Developer",
+    "message": "\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n### Response:\n\n"
+  },
+  {
+    "role": "Reviewer",
+    "message": "@jurgev is there a way to improve this? I mean, instead of 4 lines of code (the \"c\" and \"d\" assignments and the \"CHECK\" lines) it would be nice to just have a single line \"KRATOS_CHECK_CROSS_PRODUCT(b, a);\" this is not just a code improvement but it will also simplify this test (test it all once)\n"
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -600,6 +600,8 @@ namespace Kratos\n             KRATOS_CHECK_CROSS_PRODUCT(b, a);\n             KRATOS_CHECK_UNIT_CROSS_PRODUCT(b, a);\n             KRATOS_CHECK_CROSS_PRODUCT(a, b);\n+            KRATOS_CHECK_UNIT_CROSS_PRODUCT(a, b);\n\n### Response:\n\n### Response:\nAdd another check that the unit cross product is normalized?\n"
+  },
+  {
+    "role": "Reviewer",
+    "message": "@mre-san, I have doubts about the order, as cross product is not an associative vector operation but a product of vectors. I think the result will be different if we swap b and a. @mre-san, do you agree with this?\n"
+  },
+  {
+    "role": "Developer",
+    "message": "I think I'm wrong. The cross product is commutative. You can switch a and b and the result will not change.\n"
+  },
+  {
+    "role": "Reviewer",
+    "message": "```suggestion KRATOS_CHECK_DOUBLE_EQUAL(c[2], 2.0, 1e-12); KRATOS_CHECK_DOUBLE_EQUAL(d[2], 1.0, 1e-12); ```\n"
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -605,8 +605,13 @@ namespace Kratos\n             const array_1d<double, 3>  d = MathUtils<double>::UnitCrossProduct(a, b);\n             KRATOS_CHECK_EQUAL(d[2], 1.0);\n             const array_1d<double, 3>  e = MathUtils<double>::UnitCrossProduct(b, a);\n             KRATOS_CHECK_EQUAL(e[0], 1.0);\n-\n-            const array_1d<double, 3>  c = MathUtils<double>::CrossProduct(a, b);\n+            array_1d<double, 3>  c, e;\n+\n+            MathUtils<double>::CrossProduct(c, b, a);\n+            KRATOS_CHECK_EQUAL(c[2], 2.0);\n+\n+            MathUtils<double>::CrossProduct(e, a, b);\n+            KRATOS_CHECK_EQUAL(e[0], 2.0);"
+  },
+  {
+    "role": "Reviewer",
+    "message": "```suggestion KRATOS_CHECK_EQUAL(d[2], a.size()/b.size()); ```\n"
+  },
+  {
+    "role": "Developer",
+    "message": "The only file that has this issue in the PR was a code snippet, so it's okay to do it here.\n"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Checking the z component of the cross product is not enough, since that is not necessarily equal to the length of the vector.\n"
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -600,6 +600,12 @@ namespace Kratos\n             KRATOS_CHECK_EQUAL(d[0], 1.0);\n             KRATOS_CHECK_EQUAL(d[1], -2.0);\n             KRATOS_CHECK_EQUAL(d[2], 2.0);\n+\n+            const array_1d<double, 3> e = MathUtils<double>::CrossProduct(a, b);\n+            const double norm_e = MathUtils<double>::Norm(e);\n\n### Response:\nThis is not good because CrossProduct does not normalize the vector.\n"
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {
+    "role": "Reviewer",
+    "message": "```suggestion KRATOS_CHECK_DOUBLE_EQUAL(c[2], 2.0, 1e-12); KRATOS_CHECK_DOUBLE_EQUAL(d[2], 1.0, 1e-12); ```"
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -605,8 +605,13 @@ namespace Kratos\n             const array_1d<double, 3>  d = MathUtils<double>::UnitCrossProduct(a, b);\n             KRATOS_CHECK_EQUAL(d[2], 1.0);\n             const array_1d<double, 3>  e = MathUtils<double>::UnitCrossProduct(b, a);\n             KRATOS_CHECK_EQUAL(e[0], 1.0);\n-\n-            const array_1d<double, 3>  c = MathUtils<double>::CrossProduct(a, b);\n+            array_1d<double, 3>  c, e;\n+\n+            MathUtils<double>::CrossProduct(c, b, a);\n+            KRATOS_CHECK_EQUAL(c[2], 2.0);\n+\n+            MathUtils<double>::CrossProduct(e, a, b);\n+            KRATOS_CHECK_EQUAL(e[0], 2.0);"
+  },
+  {
+    "role": "Reviewer",
+    "message": "```suggestion KRATOS_CHECK_EQUAL(d[2], a.size()/b.size()); ```"
+  },
+  {
+    "role": "Developer",
+    "message": "The only file that has this issue in the PR was a code snippet, so it's okay to do it here."
+  },
+  {
+    "role": "Reviewer",
+    "message": "Checking the z component of the cross product is not enough, since that is not necessarily equal to the length of the vector."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -600,6 +600,12 @@ namespace Kratos\n             KRATOS_CHECK_EQUAL(d[0], 1.0);\n             KRATOS_CHECK_EQUAL(d[1], -2.0);\n             KRATOS_CHECK_EQUAL(d[2], 2.0);\n+\n+            const array_1d<double, 3> e = MathUtils<double>::CrossProduct(a, b);\n+            const double norm_e = MathUtils<double>::Norm(e);\n\n### Response:\nThis is not good because CrossProduct does not normalize the vector."
+  }
+]
