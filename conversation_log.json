@@ -1,26 +1,26 @@
 [
   {
     "role": "Reviewer",
-    "message": "These two tests will fail because the results are not normalized while the expected results are. You should use `MathUtils<double>::NormalizedCrossProduct` or `NormalizeVector` to make them pass."
+    "message": "Please replace `2.0` and `1.0` with `1.0/std::sqrt(2)`"
   },
   {
     "role": "Developer",
-    "message": "Based on the review comment, the new code changes would be:\n\n```c++\n@@ -595,8 +595,10 @@ namespace Kratos\n             array_1d<double, 3> b = ZeroVector(3);\n             b[0] = 1.0;\n \n-            const array_1d<double, 3>  c = MathUtils<double>::CrossProduct(a, b);\n-            const array_1d<double, 3>  d = MathUtils<double>::UnitCrossProduct(a, b);\n+            array_1d<double, 3>  c = MathUtils<double>::NormalizedCrossProduct(b, a);\n+            array_1d<double, 3>  d = MathUtils<double>::NormalizeVector(MathUtils<double>::CrossProduct(b, a));\n             \n             KRATOS_CHECK_EQUAL(c[2], 2.0);\n             KRATOS_CHECK_EQUAL(d[2], 1.0);\n```\n\nHere, I replaced the old cross"
+    "message": "### Code changes:\n```cpp\n@@ -595,8 +595,8 @@ namespace Kratos\n             array_1d<double, 3> b = ZeroVector(3);\n             b[0] = 1.0;\n \n-            const array_1d<double, 3>  c = MathUtils<double>::CrossProduct(a, b);\n-            const array_1d<double, 3>  d = MathUtils<double>::UnitCrossProduct(a, b);\n+            array_1d<double, 3>  c, d;\n+\n+            MathUtils<double>::CrossProduct(c, b, a);\n+            MathUtils<double>::UnitCrossProduct(d, b, a);\n             \n             KRATOS_CHECK_EQUAL(c[2], 1.0/std::sqrt(2));\n             KRATOS_CHECK_EQUAL(d[2], 1.0/std::sqrt(2));\n```\n\n### Explanation:\nIn the given review comment, it is asked to replace `2"
   },
   {
     "role": "Reviewer",
-    "message": "I think this vector will have a length of sqrt(3)."
+    "message": "d[2] should be same as c[2]."
   },
   {
     "role": "Developer",
-    "message": "```\n@@ -595,8 +595,10 @@ namespace Kratos\n             array_1d<double, 3> b = ZeroVector(3);\n             b[0] = 1.0;\n \n-            const array_1d<double, 3>  c = MathUtils<double>::CrossProduct(a, b);\n-            const array_1d<double, 3>  d = MathUtils<double>::UnitCrossProduct(a, b);\n+            array_1d<double, 3>  c, d;\n+            double length;\n+\n+            MathUtils<double>::CrossProduct(c, b, a);\n+            MathUtils<double>::UnitCrossProduct(d, b, a);\n+            length = MathUtils<double>::Norm2(c);\n             \n             KRATOS_CHECK_EQUAL(c[2], 2.0);\n+            KRATOS_CHECK_EQUAL(length, std::sqrt(3));\n             KRATOS_CHECK_EQUAL(d[2],"
+    "message": "```cpp\n@@ -595,8 +595,10 @@ namespace Kratos\n             array_1d<double, 3> b = ZeroVector(3);\n             b[0] = 1.0;\n \n-            const array_1d<double, 3>  c = MathUtils<double>::CrossProduct(a, b);\n-            const array_1d<double, 3>  d = MathUtils<double>::UnitCrossProduct(a, b);\n+            array_1d<double, 3>  c, d;\n+\n+            MathUtils<double>::CrossProduct(c, b, a);\n+            MathUtils<double>::UnitCrossProduct(d, b, a);\n             \n             KRATOS_CHECK_EQUAL(c[2], 2.0);\n+            KRATOS_CHECK_EQUAL(d[2], c[2]);\n\n```\n\nThis change ensures that the value of `d[2]` is the same as `c[2]`, which is the value of the cross product of vectors"
   },
   {
     "role": "Reviewer",
-    "message": "Check that the values match with the cross product"
+    "message": "You should also check if the values are really unit for d"
   },
   {
     "role": "Developer",
-    "message": "### Instruction\n\n### New code changes:\n\n```diff\n@@ -595,8 +595,8 @@ namespace Kratos\n             array_1d<double, 3> b = ZeroVector(3);\n             b[0] = 1.0;\n \n-            const array_1d<double, 3>  c = MathUtils<double>::CrossProduct(a, b);\n-            const array_1d<double, 3>  d = MathUtils<double>::UnitCrossProduct(a, b);\n+            array_1d<double, 3>  c, d;\n+            double norm_a, norm_b;\n+\n+            MathUtils<double>::CrossProduct(c, b, a);\n+            MathUtils<double>::UnitCrossProduct(d, b, a);\n+            MathUtils<double>::Norm3D(norm_a, a);\n+            MathUtils<double>::Norm3D(norm_b, b);\n             \n             KRATOS_CHECK_EQUAL(c[2], 2.0);"
+    "message": "@@ -595,8 +595,10 @@ namespace Kratos\n             array_1d<double, 3> b = ZeroVector(3);\n             b[0] = 1.0;\n \n-            const array_1d<double, 3>  c = MathUtils<double>::CrossProduct(a, b);\n-            const array_1d<double, 3>  d = MathUtils<double>::UnitCrossProduct(a, b);\n+            array_1d<double, 3>  c, d;\n+\n+            MathUtils<double>::CrossProduct(c, b, a);\n+            MathUtils<double>::UnitCrossProduct(d, b, a);\n+\n+            double norm_d = norm_2(d);\n+            KRATOS_CHECK_LESS_EQUAL(std::abs(norm_d - 1.0), 1.0e-5);\n             \n             KRATOS_CHECK_EQUAL(c[2], 2.0);\n             KRATOS_CHECK_E"
   }
 ]

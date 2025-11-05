@@ -10,8 +10,6 @@ content means level of descriptivity and prescriptivity of the comment.
 
 return a well structured comment generation prompt for comment generator LLM.
 
-your output must contain a placeholder called code that will be used to insert the code for the next review round.
-
 
 ### Code review comment:
 {code_review_comment}

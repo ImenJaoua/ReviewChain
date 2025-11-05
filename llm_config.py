@@ -22,3 +22,11 @@ llm_config_comment_judge = {
     "max_history": 3
 }
 
+llm_config_quality_estimator = {
+    "model": "QE_model",
+    "model_type": "huggingface_local",
+    "max_tokens": 512,
+    "api_key": "sk-1111",
+    "max_history": 3
+}
+
