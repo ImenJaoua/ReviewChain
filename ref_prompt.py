@@ -1,9 +1,7 @@
 review_classification_system_prompt_ref = """You are an expert in coding and code peer-reviewing."""
 
-review_classification_template_ref = """### Instruction
-Given the following initial code changes and a review comment, generate new code changes based on the review comment.
-The old code file is provided for context.
-You don't need to output the entire code file, just the code difference that implements the review comment.
+review_classification_template_ref = """
+Given the following initial code change (diff format) and a review comment.Your task is to generate an updated version of the code that addresses the review feedback.
 
 ### Initial code changes:
 {code_diff}
@@ -11,7 +9,5 @@ You don't need to output the entire code file, just the code difference that imp
 ### Review comment:
 {review_comment}
 
-
-### Old code file:
-{old_file}
+Return ONLY the refined code.
 """

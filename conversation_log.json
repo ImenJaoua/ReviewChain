@@ -1,26 +1,38 @@
 [
   {
     "role": "Reviewer",
-    "message": "```suggestion KRATOS_CHECK_EQUAL(c[2], 2.0); ```"
+    "message": "this should be the operator name"
   },
   {
     "role": "Developer",
-    "message": "```suggestion KRATOS_CHECK_EQUAL(c[2], 2.0); ```\n\n\n### Response:\nBased on the review comment, the new code changes would be:\n\n```diff\n@@ -595,8 +595,10 @@ namespace Kratos\n             array_1d<double, 3> b = ZeroVector(3);\n             b[0] = 1.0;\n \n-            const array_1d<double, 3>  c = MathUtils<double>::CrossProduct(a, b);\n-            const array_1d<double, 3>  d = MathUtils<double>::UnitCrossProduct(a, b);\n+            array_1d<double, 3>  c, d;\n+\n+            MathUtils<double>::CrossProduct(c, b, a);\n+            MathUtils<double>::UnitCrossProduct(d, b, a);\n             \n-            KRATOS_CHECK_EQUAL(c[2], 2.0);\n-            KRATOS_CHECK_EQUAL"
+    "message": "@@ -2537,7 +2537,7 @@ func operatorPod(podName, appName, operatorServiceIP, agentPath, operatorImagePa\n \n // operatorConfigMap returns a *core.ConfigMap for the operator pod\n // of the specified application, with the specified configuration.\n-func operatorConfigMap(appName, cmName string, labels map[string]string, config *caas.OperatorConfig) *core.ConfigMap {\n+func operatorConfigMap(appName, operatorName string, labels map[string]string, config *caas.OperatorConfig) *core.ConfigMap {\n \tdata, err := yaml.Marshal(config)\n \tif err != nil {\n \t\tpanic(err)"
+  },
+  {
+    "role": "QualityEstimator",
+    "message": "REJECTED: The function name `operatorConfigMap` does not match the context provided. It might lead to confusion as it suggests that the ConfigMap is related to an operator, but as there are no other parameters that would suggest this. It is better to use a name that clearly indicates the relationship between the ConfigMap and the operator."
   },
   {
     "role": "Reviewer",
-    "message": "Suggestion: the order of a and b."
+    "message": "```suggestion // operatorConfigMap returns a *core.ConfigMap for the operator pod of the specified application, with the specified configuration. // A core.ConfigMap with the specified name, in the specified namespace, with the specified data. If a ConfigMap with the same name exists, it will be replaced. The operatorConfigMap is used in the operator Deployment, and it is the ConfigMap that contains the operator's configuration. // operatorConfigMap should be updated to use the operator name as its name. // operatorConfigMap should be updated to take an operator name as its first argument, and should use the operator name in the ConfigMap name. // operatorPod should be updated to take the operator name as its argument. // operatorPod should be updated to use the operator name in the ConfigMap name. // operatorPod should be updated to use the operator name in the ConfigMap name. // operatorPod should be updated to use the operator name in the ConfigMap name. // operatorPod should be updated to use the operator name in the pod name. // operatorService should be updated to use the operator name in the service name. // operatorService should be updated to use the operator name in the service name. // Deployment should be updated to"
   },
   {
     "role": "Developer",
-    "message": "Here is the corrected code based on the review comment:\n\n```diff\n@@ -595,8 +595,10 @@ namespace Kratos\n             array_1d<double, 3> b = ZeroVector(3);\n             b[0] = 1.0;\n \n-            const array_1d<double, 3>  c = MathUtils<double>::CrossProduct(a, b);\n-            const array_1d<double, 3>  d = MathUtils<double>::UnitCrossProduct(a, b);\n+            array_1d<double, 3>  c, d;\n+\n+            MathUtils<double>::CrossProduct(c, a, b);\n+            MathUtils<double>::UnitCrossProduct(d, a, b);\n             \n             KRATOS_CHECK_EQUAL(c[2], 2.0);\n             KRATOS_CHECK_EQUAL(d[2], 1.0);\n```\n\nThis code change fixes the order of the arguments in the calls to `MathUtils<double>::CrossProduct"
+    "message": "@@ -2537,7 +2537,7 @@ func operatorPod(podName, appName, operatorServiceIP, agentPath, operatorImagePa\n \n // operatorConfigMap returns a *core.ConfigMap for the operator pod\n // of the specified application, with the specified configuration.\n-func operatorConfigMap(appName, operatorName string, labels map[string]string, config *caas.OperatorConfig) *core.ConfigMap {\n+func operatorConfigMap(operatorName string, labels map[string]string, config *caas.OperatorConfig) *core.ConfigMap {\n \tdata, err := yaml.Marshal(config)\n \tif err != nil {\n \t\tpanic(err)"
+  },
+  {
+    "role": "QualityEstimator",
+    "message": "REJECTED: The function 'operatorConfigMap' takes two parameters, 'operatorName' and 'labels', but the original function 'operatorConfigMap' takes three parameters, 'appName', 'operatorName' and 'labels'. The 'appName' parameter is not used in the refined code, so it may be a mistake."
   },
   {
     "role": "Reviewer",
-    "message": "@mauricio-san please put the assert before the statement... it's not just about passing the checks..."
+    "message": "```suggestion // operatorConfigMap returns a *core.ConfigMap for the operator pod of the specified application, with the specified configuration. // A core.ConfigMap with the specified name, in the specified namespace, with the specified data. If a ConfigMap with the same name exists, it will be replaced. The operatorConfigMap is used in the operator Deployment, and it is the ConfigMap that contains the operator's configuration. // operatorConfigMap should be updated to use the operator name as its name. // operatorConfigMap should be updated to take an operator name as its first argument, and should use the operator name in the ConfigMap name. // operatorPod should be updated to take the operator name as its argument. // operatorPod should be updated to use the operator name in the ConfigMap name. // operatorPod should be updated to use the operator name in the ConfigMap name. // operatorPod should be updated to use the operator name in the pod name. // operatorPod should be updated to use the operator name in the ConfigMap name. // operatorService should be updated to use the operator name in the service name. // operatorService should be updated to use the operator name in the service name. // Deployment should be updated to"
   },
   {
     "role": "Developer",
-    "message": "## Code changes:\n\n```\n@@ -593,6 +593,8 @@ namespace Kratos\n         {\n             array_1d<double, 3> a = ZeroVector(3);\n             a[0] = 1.0;\n+            KRATOS_CHECK_EQUAL(a[0], 1.0);\n \n             array_1d<double, 3> b = ZeroVector(3);\n             b[0] = 1.0;\n```\n\nThe reviewer is suggesting to include assertion statements before the computation to ensure the initial conditions are met. If the initial conditions are not met, the program will throw an error, which will help in debugging."
+    "message": "@@ -2537,10 +2537,7 @@ func operatorPod(podName, appName, operatorServiceIP, agentPath, operatorImagePa\n \n // operatorConfigMap returns a *core.ConfigMap for the operator pod\n // of the specified application, with the specified configuration.\n-func operatorConfigMap(operatorName string, labels map[string]string, config *caas.OperatorConfig) *core.ConfigMap {\n-\tdata, err := yaml.Marshal(config)\n-\tif err != nil {\n-\t\tpanic(err)\n-\t}\n+func operatorConfigMap(operatorName string, labels map[string]string, config *caas.OperatorConfig) *core.ConfigMap {\n \treturn &core.ConfigMap{\n \t\tObjectMeta: metav1.ObjectMeta{\n \t\t\tName:      operatorName,"
+  },
+  {
+    "role": "QualityEstimator",
+    "message": "REJECTED: The function 'operatorConfigMap' is incomplete. It seems to be missing the code for creating the ConfigMap object."
   }
 ]
