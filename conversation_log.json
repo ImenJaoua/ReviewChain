@@ -1,26 +1,26 @@
 [
   {
     "role": "Reviewer",
-    "message": "Do you know if the normalization is correct? I've found an example with this, and the results are different..."
+    "message": "d should be `2.0` for the same reason that c is `2.0`."
   },
   {
     "role": "Developer",
-    "message": "There doesn't seem to be any issue with the existing code. The cross product of vectors a and b, and the unit cross product of vectors a and b, are being correctly calculated and stored in vectors c and d, respectively.\n\nThe normalization of the cross product should be correct, based on the mathematical definition of the cross product. The unit cross product is the cross product of two vectors divided by their length, which is correctly handled by `MathUtils<double>::UnitCrossProduct`.\n\nSo, the review comment seems to be spot on. The code appears to be correctly implemented."
+    "message": "```diff\n@@ -595,8 +597,8 @@ namespace Kratos\n             array_1d<double, 3> b = ZeroVector(3);\n             b[0] = 1.0;\n \n-            const array_1d<double, 3>  c = MathUtils<double>::CrossProduct(a, b);\n-            const array_1d<double, 3>  d = MathUtils<double>::UnitCrossProduct(a, b);\n+            array_1d<double, 3>  c, d;\n \n+            MathUtils<double>::CrossProduct(c, b, a);\n+            MathUtils<double>::UnitCrossProduct(d, b, a);\n             \n             KRATOS_CHECK_EQUAL(c[2], 2.0);\n-            KRATOS_CHECK_EQUAL(d[2], 1.0);\n+            KRATOS_CHECK_EQUAL(d[2], 2.0);\n```\n\nThe difference is that in the new code, instead of setting"
   },
   {
     "role": "Reviewer",
-    "message": "Please check this, I guess it should also be 2.0"
+    "message": "The `1.0` is expected"
   },
   {
     "role": "Developer",
-    "message": "### New code changes:\n\n```\n@@ -595,8 +595,10 @@ namespace Kratos\n             array_1d<double, 3> b = ZeroVector(3);\n             b[0] = 1.0;\n \n-            const array_1d<double, 3>  c = MathUtils<double>::CrossProduct(a, b);\n-            const array_1d<double, 3>  d = MathUtils<double>::UnitCrossProduct(a, b);\n+            array_1d<double, 3>  c, d;\n+\n+            MathUtils<double>::CrossProduct(c, b, a);\n+            MathUtils<double>::UnitCrossProduct(d, b, a);\n             \n             KRATOS_CHECK_EQUAL(c[2], 2.0);\n             KRATOS_CHECK_EQUAL(d[2], 2.0);\n```\n\nThis change ensures that `KRATOS_CHECK_EQUAL(d[2], 2.0);` also checks for"
+    "message": "```diff\n@@ -595,10 +595,9 @@ namespace Kratos\n             array_1d<double, 3> b = ZeroVector(3);\n             b[0] = 1.0;\n \n-            array_1d<double, 3>  c, d;\n-\n-            MathUtils<double>::CrossProduct(c, b, a);\n-            MathUtils<double>::UnitCrossProduct(d, b, a);\n+            const array_1d<double, 3>  c = MathUtils<double>::CrossProduct(a, b);\n+            const array_1d<double, 3>  d = MathUtils<double>::UnitCrossProduct(a, b);\n             \n             KRATOS_CHECK_EQUAL(c[2], 2.0);\n             KRATOS_CHECK_EQUAL(d[2], 1.0);\n```\n\nI've corrected the code by adding the missing number `1.0` in the initialization of `array_1d b`, and then the check has been updated"
   },
   {
     "role": "Reviewer",
-    "message": "I think you should check that the norms of c and d are close to 1.0."
+    "message": "Check the other indices."
   },
   {
     "role": "Developer",
-    "message": "```diff\n@@ -604,4 +606,6 @@ namespace Kratos\n             const double norm_c = MathUtils<double>::Norm(c);\n             const double norm_d = MathUtils<double>::Norm(d);\n \n-            KRATOS_CHECK_CLOSE(norm_c, 1.0, 1e-10);\n-            KRATOS_CHECK_CLOSE(norm_d, 1.0, 1e-10);\n+            KRATOS_CHECK_CLOSE(norm_c, 1.0, 1e-10);\n+            KRATOS_CHECK_CLOSE(norm_d, 1.0, 1e-10);\n```\n\nThis change adds checks to ensure that the norms of the cross products `c` and `d` are close to 1.0. This is a good practice in numerical computations as it ensures that the vectors are indeed unit vectors."
+    "message": "```c++\n@@ -595,8 +595,10 @@ namespace Kratos\n             array_1d<double, 3> b = ZeroVector(3);\n             b[0] = 1.0;\n \n-            const array_1d<double, 3>  c = MathUtils<double>::CrossProduct(a, b);\n-            const array_1d<double, 3>  d = MathUtils<double>::UnitCrossProduct(a, b);\n+            array_1d<double, 3>  c, d;\n+\n+            MathUtils<double>::CrossProduct(c, b, a);\n+            MathUtils<double>::UnitCrossProduct(d, b, a);\n             \n             KRATOS_CHECK_EQUAL(c[0], 2.0); // Checking the other indices\n             KRATOS_CHECK_EQUAL(c[1], 0.0);\n             KRATOS_CHECK_EQUAL(d[0], 1.0); // Checking the other indices\n             KR"
   }
 ]

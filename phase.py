@@ -17,6 +17,8 @@ class ReviewPhase:
         """Run iterative dialogue between A1 and A2."""
         code = self.chat_env.get("code")
 
+        print(" Code : ",code)
+
         for round_id in range(self.max_rounds):
             print(f"\n=== ROUND {round_id + 1} ===")
             self.chat_env.next_iteration()

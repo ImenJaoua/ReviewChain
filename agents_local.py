@@ -11,6 +11,28 @@ from ref_prompt import (
     review_classification_template_ref, 
 )
 
+from comment_prompt_AUTOMAT import (
+    review_classification_system_prompt as review_classification_system_prompt_auto,
+    review_classification_template as review_classification_template_auto,
+)
+
+from comment_prompt_chain_zero import (
+    review_classification_system_prompt as review_classification_system_prompt_cz,
+    review_classification_template as review_classification_template_cz,
+)
+
+from comment_prompt_chain_few import (
+    review_classification_system_prompt as review_classification_system_prompt_cf,
+    review_classification_template as review_classification_template_cf,
+)
+
+from comment_prompt_Meta import (
+    review_classification_system_prompt as review_classification_system_prompt_meta,
+    review_classification_template as review_classification_template_meta,
+)
+
+
+
 def load_model(model_name_or_path):
 
     
