@@ -16,6 +16,9 @@ class Greeter:
 
     def greet(self) -> str:
         return f"Hello, {self.name}! Today is {datetime.now().strftime('%Y-%m-%d')}."
+    
+    def farewell(self) -> str:
+        return f"Goodbye, {self.name}! Have a great day."
 
 
 def add_numbers(a: float, b: float) -> float:

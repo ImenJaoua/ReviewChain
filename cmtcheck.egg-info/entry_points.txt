@@ -1,0 +1,2 @@
+[console_scripts]
+cmtcheck = cmtcheck:main
