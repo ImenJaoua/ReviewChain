@@ -2,31 +2,31 @@
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from peft import PeftModel
-from comment_prompt import (
+from Prompts.comment_prompt import (
     review_classification_system_prompt,
     review_classification_template,
 )
-from ref_prompt import (
+from Prompts.ref_prompt import (
     review_classification_system_prompt_ref,
     review_classification_template_ref, 
 )
 
-from comment_prompt_AUTOMAT import (
+from Prompts.comment_prompt_AUTOMAT import (
     review_classification_system_prompt as review_classification_system_prompt_auto,
     review_classification_template as review_classification_template_auto,
 )
 
-from comment_prompt_chain_zero import (
+from Prompts.comment_prompt_chain_zero import (
     review_classification_system_prompt as review_classification_system_prompt_cz,
     review_classification_template as review_classification_template_cz,
 )
 
-from comment_prompt_chain_few import (
+from Prompts.comment_prompt_chain_few import (
     review_classification_system_prompt as review_classification_system_prompt_cf,
     review_classification_template as review_classification_template_cf,
 )
 
-from comment_prompt_Meta import (
+from Prompts.comment_prompt_Meta import (
     review_classification_system_prompt as review_classification_system_prompt_meta,
     review_classification_template as review_classification_template_meta,
 )

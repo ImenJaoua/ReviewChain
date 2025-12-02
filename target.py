@@ -13,11 +13,18 @@ class Greeter:
 
     def __init__(self, name: str):
         self.name = name
+        self.name = name
 
     def greet(self) -> str:
+        print(f"[DEBUG] Greeting user: {self.name}")
+        print(f"[DEBUG] Current date and time: {datetime.now()}")
+        self.name = self.name.title()
         return f"Hello, {self.name}! Today is {datetime.now().strftime('%Y-%m-%d')}."
     
     def farewell(self) -> str:
+        return f"Goodbye, {self.name.title()}! Have a great day."
+    def farewell(self) -> str:
+        self.name = self.name.title()
         return f"Goodbye, {self.name}! Have a great day."
 
 

@@ -14,9 +14,6 @@ def main(initial_code=None):
     phase = ReviewPhase(chat_env, max_rounds=3)
     final_code = phase.execute()
 
-    # --- Save and print results ---
-    chat_env.export_history()
-    print("\n✅ Final refined code:\n", final_code)
-    print("\n🧠 Memory stored in:", chat_env.memory.filename)
+    print("\n✅ ReviewChain session complete.")
 
     return final_code
