@@ -46,7 +46,7 @@ class ChatEnv:
       - optional persistent memory
     """
 
-    def __init__(self, chat_env_config: ChatEnvConfig, initial_code: str = ""):
+    def __init__(self, chat_env_config: ChatEnvConfig, initial_code: str = "", initial_file: str = ""):
         self.config = chat_env_config
 
         # Core shared state

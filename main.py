@@ -9,18 +9,18 @@ if __name__ == "__main__":
     config = ChatEnvConfig(with_memory=True, test_enabled=True)
 
     # --- Initialize environment ---
-    initial_code = """ @@ -2633,22 +2537,26 @@ func operatorPod(podName, appName, operatorServiceIP, agentPath, operatorImagePa
+    initial_code = """ @@ -41,11 +41,22 @@
+ 	@NotBlank
+ 	private String composedTaskRunnerName = "composed-task-runner";
  
- // operatorConfigMap returns a *core.ConfigMap for the operator pod
- // of the specified application, with the specified configuration.
--func operatorConfigMap(appName, operatorName string, config *caas.OperatorConfig) *core.ConfigMap {
--	configMapName := operatorConfigMapName(operatorName)
-+func operatorConfigMap(appName, cmName string, labels map[string]string, config *caas.OperatorConfig) *core.ConfigMap {
++	@NotBlank
++	private String schedulerTaskLauncher = "scheduler-task-launcher";
 """
+    
     chat_env = ChatEnv(config, initial_code)
 
     # --- Run one review phase ---
-    phase = ReviewPhase(chat_env, max_rounds=3)
+    phase = ReviewPhase(chat_env, max_rounds=5)
     final_code = phase.execute()
 
     # --- Save and print results ---

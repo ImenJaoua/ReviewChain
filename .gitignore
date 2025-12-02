@@ -1,0 +1,35 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Logs
+*.log
+
+# Model checkpoints (you had many)
+*.pt
+*.bin
+*.safetensors
+*.pth
+
+# JSON logs and generated data
+conversation_log.json
+memory_store/
+results/
+
+# IDE / OS junk
+.DS_Store
+*.swp
+
+# Venv (if ever inside project)
+venv/
+.env/
+
+judgement_quality_review_agent/
+
+models/

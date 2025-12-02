@@ -1,38 +1,26 @@
 [
   {
     "role": "Reviewer",
-    "message": "this should be the operator name"
+    "message": "I think that this is not an explicit configuration. You can remove this."
   },
   {
-    "role": "Developer",
-    "message": "@@ -2537,7 +2537,7 @@ func operatorPod(podName, appName, operatorServiceIP, agentPath, operatorImagePa\n \n // operatorConfigMap returns a *core.ConfigMap for the operator pod\n // of the specified application, with the specified configuration.\n-func operatorConfigMap(appName, cmName string, labels map[string]string, config *caas.OperatorConfig) *core.ConfigMap {\n+func operatorConfigMap(appName, operatorName string, labels map[string]string, config *caas.OperatorConfig) *core.ConfigMap {\n \tdata, err := yaml.Marshal(config)\n \tif err != nil {\n \t\tpanic(err)"
-  },
-  {
-    "role": "QualityEstimator",
-    "message": "REJECTED: The function name `operatorConfigMap` does not match the context provided. It might lead to confusion as it suggests that the ConfigMap is related to an operator, but as there are no other parameters that would suggest this. It is better to use a name that clearly indicates the relationship between the ConfigMap and the operator."
+    "role": "FormatJudge",
+    "message": "REJECTED: Comment is too brief and lacks clarity. Provide a more detailed explanation for the suggestion."
   },
   {
     "role": "Reviewer",
-    "message": "```suggestion // operatorConfigMap returns a *core.ConfigMap for the operator pod of the specified application, with the specified configuration. // A core.ConfigMap with the specified name, in the specified namespace, with the specified data. If a ConfigMap with the same name exists, it will be replaced. The operatorConfigMap is used in the operator Deployment, and it is the ConfigMap that contains the operator's configuration. // operatorConfigMap should be updated to use the operator name as its name. // operatorConfigMap should be updated to take an operator name as its first argument, and should use the operator name in the ConfigMap name. // operatorPod should be updated to take the operator name as its argument. // operatorPod should be updated to use the operator name in the ConfigMap name. // operatorPod should be updated to use the operator name in the ConfigMap name. // operatorPod should be updated to use the operator name in the ConfigMap name. // operatorPod should be updated to use the operator name in the pod name. // operatorService should be updated to use the operator name in the service name. // operatorService should be updated to use the operator name in the service name. // Deployment should be updated to"
+    "message": "Since you've added this property here, you should also add it to `SchedulerConfig`."
+  },
+  {
+    "role": "FormatJudge",
+    "message": "ACCEPTED"
   },
   {
     "role": "Developer",
-    "message": "@@ -2537,7 +2537,7 @@ func operatorPod(podName, appName, operatorServiceIP, agentPath, operatorImagePa\n \n // operatorConfigMap returns a *core.ConfigMap for the operator pod\n // of the specified application, with the specified configuration.\n-func operatorConfigMap(appName, operatorName string, labels map[string]string, config *caas.OperatorConfig) *core.ConfigMap {\n+func operatorConfigMap(operatorName string, labels map[string]string, config *caas.OperatorConfig) *core.ConfigMap {\n \tdata, err := yaml.Marshal(config)\n \tif err != nil {\n \t\tpanic(err)"
+    "message": "@@ -42,7 +42,7 @@ public class TaskRunnerConfig {\n \tprivate String composedTaskRunnerName = \"composed-task-runner\";\n \n \t@NotBlank\n-\tprivate String schedulerTaskLauncher = \"scheduler-task-launcher\";\n+\tprivate String taskSchedulerName = \"scheduler-task-launcher\";\n \n \tpublic String getComposedTaskRunnerName() {\n \t\treturn composedTaskRunnerName;"
   },
   {
     "role": "QualityEstimator",
-    "message": "REJECTED: The function 'operatorConfigMap' takes two parameters, 'operatorName' and 'labels', but the original function 'operatorConfigMap' takes three parameters, 'appName', 'operatorName' and 'labels'. The 'appName' parameter is not used in the refined code, so it may be a mistake."
-  },
-  {
-    "role": "Reviewer",
-    "message": "```suggestion // operatorConfigMap returns a *core.ConfigMap for the operator pod of the specified application, with the specified configuration. // A core.ConfigMap with the specified name, in the specified namespace, with the specified data. If a ConfigMap with the same name exists, it will be replaced. The operatorConfigMap is used in the operator Deployment, and it is the ConfigMap that contains the operator's configuration. // operatorConfigMap should be updated to use the operator name as its name. // operatorConfigMap should be updated to take an operator name as its first argument, and should use the operator name in the ConfigMap name. // operatorPod should be updated to take the operator name as its argument. // operatorPod should be updated to use the operator name in the ConfigMap name. // operatorPod should be updated to use the operator name in the ConfigMap name. // operatorPod should be updated to use the operator name in the pod name. // operatorPod should be updated to use the operator name in the ConfigMap name. // operatorService should be updated to use the operator name in the service name. // operatorService should be updated to use the operator name in the service name. // Deployment should be updated to"
-  },
-  {
-    "role": "Developer",
-    "message": "@@ -2537,10 +2537,7 @@ func operatorPod(podName, appName, operatorServiceIP, agentPath, operatorImagePa\n \n // operatorConfigMap returns a *core.ConfigMap for the operator pod\n // of the specified application, with the specified configuration.\n-func operatorConfigMap(operatorName string, labels map[string]string, config *caas.OperatorConfig) *core.ConfigMap {\n-\tdata, err := yaml.Marshal(config)\n-\tif err != nil {\n-\t\tpanic(err)\n-\t}\n+func operatorConfigMap(operatorName string, labels map[string]string, config *caas.OperatorConfig) *core.ConfigMap {\n \treturn &core.ConfigMap{\n \t\tObjectMeta: metav1.ObjectMeta{\n \t\t\tName:      operatorName,"
-  },
-  {
-    "role": "QualityEstimator",
-    "message": "REJECTED: The function 'operatorConfigMap' is incomplete. It seems to be missing the code for creating the ConfigMap object."
+    "message": "ACCEPTED"
   }
 ]
