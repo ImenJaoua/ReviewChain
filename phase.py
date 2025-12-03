@@ -49,14 +49,14 @@ class ReviewPhase:
 
         for round_id in range(self.max_rounds):
 
-            print(f"\n================ ROUND {round_id + 1}/{self.max_rounds} ================")
+            print(f"\n================ ROUND {round_id + 1} ================")
 
             # =====================================================
             # PHASE 1 — A1: Comment Generator
             # =====================================================
             print("\n--- Phase 1: Comment Generation (A1) ---")
 
-            comment = self.a1_comment(current_code)
+            comment = self.a1_comment(current_code, previous_feedback)
 
             print("\n💬 A1 Comment:")
             print(comment)
@@ -151,7 +151,7 @@ class ReviewPhase:
                         "decision": 1,
                         "justification": qe_feedback,
                         "previous_comments": comment,
-                        "previous_code": current_code
+                        "previous_code": proposed_code
                     }
                     continue
 

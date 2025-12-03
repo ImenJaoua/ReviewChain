@@ -32826,5 +32826,101 @@
   {
     "role": "Developer",
     "message": "@@ -51,11 +51,9 @@ def dice_loss(pred,\n                     eps=1e-3,\n                     reduction='mean',\n                     avg_factor=None):\n-    \"\"\"Calculate naive dice loss, the coefficient in the denominator is the\n-       first power instead of the second power.\n+    \"\"\"Calculate naive dice loss.\n \n-    Args:\n-        pred (torch.Tensor): The prediction, has a shape (n, *)\n+    Args:\n         pred (torch.Tensor): The prediction, has a shape (n, *)\n         target (torch.Tensor): The label of the prediction, has a shape (n, *)\n         eps (float): A small float number to avoid dividing by zero."
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a deprecation warning for this change in the write() method. It's recommended to use a more informative warning message, explaining the change in behavior and the removal of the last letter of the segid. This will help users understand the implications of this change."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -905,6 +905,13 @@ class PDBWriter(StructureWriter):\n             :class:`~MDAnalysis.core.universe.Universe` to write.\n         \"\"\"\n         \n+        warnings.warn(\"Using the last letter of the segid for the chainID \"\n+                      \"is now deprecated and will be changed in 2.0. \"\n+                      \"In 2.0, the chainID attribute will be used if it \"\n+                      \"exists, or a placeholder value.\", DeprecationWarning)\n+        \n         self._update_frame(obj)\n         self._write_pdb_header()\n         # Issue 105: with write() ONLY write a single frame; use writeframes\n         # instead"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider revising the deprecation warning for the `segid` handling in the PDB writer. The current message seems outdated and might not accurately reflect the changes in the codebase. Could you provide more context or clarify the reasoning behind the warning text?"
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -906,6 +906,10 @@ class PDBWriter(WriterBase):\n         \"\"\"\n         \n         self._update_frame(obj)\n+        # Issue 105: with write() ONLY write a single frame; use\n+        # .trajectory.write() to write multiple frames.  This is deprecated\n+        # in 2.0 and will be removed in 3.0.\n+        #\n         self._write_pdb_header()\n         # Issue 105: with write() ONLY write a single frame; use\n         # .trajectory.write() to write multiple frames.  This is deprecated"
+  },
+  {
+    "role": "Reviewer",
+    "message": "The deprecation warning for the segid chainID issue seems to be removed. Could you confirm whether this change is intentional, and if so, provide a justification for this removal?"
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -905,6 +905,8 @@ class PDBWriter(TopologyIO, CoordinatesIO):\n             :class:`~MDAnalysis.core.universe.Universe` to write.\n         \"\"\"\n         \n+        # Issue 105: with write() ONLY write a single frame; use\n+        # write_frame() for writing multiple frames to a single pdb.\n         self._update_frame(obj)\n         self._write_pdb_header()\n         # Issue 105: with write() ONLY write a single frame; use"
+  },
+  {
+    "role": "Reviewer",
+    "message": "The deprecation warning for using the last letter of the segid for the chainID is no longer necessary, as the approach has been updated in the code. However, it would be useful to add a note or warning indicating that this change will be implemented in MDAnalysis 2.0."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -903,11 +903,11 @@ class PDBWriter(BaseWriter):\n             The :class:`~MDAnalysis.core.groups.AtomGroup` or\n             :class:`~MDAnalysis.core.universe.Universe` to write.\n         \"\"\"\n-        \n+        # Issue 105: with write() ONLY write a single frame; use\n+        #           write_selection() to write an arbitrary subset of a\n+        #           trajectory.\n         self._update_frame(obj)\n         self._write_pdb_header()\n-        # Issue 105: with write() ONLY write a single frame; use\n-        #           write_selection() to write an arbitrary subset of a\n-        #           trajectory.\n+        \n         for atom in self.segments:\n             self._write_pdb_atom(atom)\n         self._write_pdb_footer()"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a note to the docstring or documentation to clarify that the `write()` method may only write a single frame, and provide a reference to the issue on GitHub for additional context."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -904,6 +904,10 @@ class PDBWriter(Writer):\n             :class:`~MDAnalysis.core.universe.Universe` to write.\n         \"\"\"\n         \n+        # Issue 105: with write() ONLY write a single frame; use\n+        # write_multiframe() for multiple frames\n+        # https://github.com/MDAnalysis/mdanalysis/issues/105\n+        \n         self._update_frame(obj)\n         self._write_pdb_header()\n         # Issue 105: with write() ONLY write a single frame; use"
+  },
+  {
+    "role": "Reviewer",
+    "message": "The deprecation notice for the PDB writer is no longer necessary as it was removed in https://github.com/MDAnalysis/MDAnalysis/pull/1959. However, the code change to remove the warning seems intentional. Could you confirm if this change is intended or if there's a specific reason for it?"
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -906,6 +906,11 @@ class PDBWriter(base.FileWriter):\n         \"\"\"\n         \n         self._update_frame(obj)\n+        # Issue 105: with write() ONLY write a single frame; use\n+        # with write_multiframe() to write multiple frames.\n+        # Issue 1959: removed deprecation warning for chainID.\n+\n+        \n         self._write_pdb_header()\n         # Issue 105: with write() ONLY write a single frame; use\n         # with write_multiframe() to write multiple frames."
+  },
+  {
+    "role": "Reviewer",
+    "message": "The `_write_pdb_header` method's functionality is being removed and replaced with a `_update_frame` call. Consider merging this change with `_update_frame` for a more streamlined approach."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -903,13 +903,10 @@ class PDBWriter(Writer):\n             The :class:`~MDAnalysis.core.groups.AtomGroup` or\n             :class:`~MDAnalysis.core.universe.Universe` to write.\n         \"\"\"\n-        \n-        self._update_frame(obj)\n-        self._write_pdb_header()\n-        # Issue 105: with write() ONLY write a single frame; use\n-        # write_iterable() for multiple frames.\n-        self._write_pdb_atom_records(obj)\n-        self._write_pdb_conect_records(obj)\n-        self._write_pdb_footer()\n+        self._update_frame(obj)\n+        self._write_pdb_atom_records(obj)\n+        self._write_pdb_conect_records(obj)\n+        self._write_pdb_footer()\n \n     def write_iterable(self, objs):\n         \"\"\"Write multiple frames to"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a clear warning message about the upcoming deprecation and change for the chainID attribute. Instead of using the last letter of the segid, which will be removed in 2.0, consider using a placeholder value or the chainID attribute if it exists. This will ensure users are informed about the upcoming change."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -905,6 +905,13 @@ class PDBWriter(FileWriter):\n             :class:`~MDAnalysis.core.universe.Universe` to write.\n         \"\"\"\n         \n+        warnings.warn(\"The last letter of the segid for the chainID is \"\n+                      \"now deprecated and will be changed in 2.0. \"\n+                      \"In 2.0, the chainID attribute will be used if it \"\n+                      \"exists, or a placeholder value.\", DeprecationWarning)\n+\n+        self._update_frame(obj)\n+        self._write_pdb_header()\n+        \n         # Issue 105: with write() ONLY write a single frame; use\n         # the writeframe() method to write multiple frames to a file.\n         if len(self.universe.trajectory) > 1:"
+  },
+  {
+    "role": "Reviewer",
+    "message": "The `Issue 105` warning for deprecation seems to be outdated. Can you confirm its removal or provide the reasoning for its replacement?"
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -906,7 +906,9 @@ class PDBWriter(Writer):\n         \"\"\"\n         \n         self._update_frame(obj)\n-        self._write_pdb_header()\n+        self._write_pdb_header(obj)\n+        \n+        # Issue 105: with write() ONLY write a single frame; use\n         self._write_pdbatom()\n         for seg in self._segments():\n             self._write_pdbsegment(seg)"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider removing the deprecation warning for the segid/chainID handling as it's not clear why it was necessary in the first place. Could you provide more context or clarify the reasoning behind this warning?"
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -903,8 +903,7 @@ class PDBWriter(object):\n             The :class:`~MDAnalysis.core.groups.AtomGroup` or\n             :class:`~MDAnalysis.core.universe.Universe` to write.\n         \"\"\"\n-        \n-        self._update_frame(obj)\n+        self._update_frame(obj, noWarn=True)\n         self._write_pdb_header()\n         # Issue 105: with write() ONLY write a single frame; use\n         # _write_single_frame() if you want to write multiple frames."
+  },
+  {
+    "role": "Reviewer",
+    "message": "This code change seems to be incomplete. Can you please clarify the purpose of the removal of the deprecation warning and the removal of the PDB header writing logic? Additionally, it's unclear why only a single frame is written during the `write()` method."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -905,6 +905,10 @@ class PDBWriter(object):\n             :class:`~MDAnalysis.core.universe.Universe` to write.\n         \"\"\"\n         \n+        self._update_frame(obj)\n+        self._write_pdb_header()\n+\n+        # Issue 105: with write() ONLY write a single frame; use\n         self._write_pdb_atom_block(obj)\n         self._write_pdb_conect_block(obj)\n         self._write_pdb_ter_block(obj)"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider removing the deprecation warning as it seems to be outdated. Is there a specific reason for keeping this warning or is it a legacy issue?"
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -903,10 +903,7 @@ class PDBWriter(Writer):\n             The :class:`~MDAnalysis.core.groups.AtomGroup` or\n             :class:`~MDAnalysis.core.universe.Universe` to write.\n         \"\"\"\n-        \n-        self._update_frame(obj)\n-        self._write_pdb_header()\n-        # Issue 105: with write() ONLY write a single frame; use\n+        self._update_frame(obj)\n+        self._write_pdb(self.atomgroup, self.atomgroup.segments)\n         return\n \n     def _write_pdb(self, atoms, segments):"
   }
 ]

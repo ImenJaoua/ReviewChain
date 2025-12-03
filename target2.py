@@ -1,1313 +1,750 @@
-# -*- Mode: python; tab-width: 4; indent-tabs-mode:nil; coding:utf-8 -*-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
-#
-# MDAnalysis --- https://www.mdanalysis.org
-# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
-# (see the file AUTHORS for the full list of names)
-#
-# Released under the GNU Public Licence, v2 or any higher version
-#
-# Please cite your use of MDAnalysis in published work:
-#
-# R. J. Gowers, M. Linke, J. Barnoud, T. J. E. Reddy, M. N. Melo, S. L. Seyler,
-# D. L. Dotson, J. Domanski, S. Buchoux, I. M. Kenney, and O. Beckstein.
-# MDAnalysis: A Python package for the rapid analysis of molecular dynamics
-# simulations. In S. Benthall and S. Rostrup editors, Proceedings of the 15th
-# Python in Science Conference, pages 102-109, Austin, TX, 2016. SciPy.
-# doi: 10.25080/majora-629e541a-00e
-#
-# N. Michaud-Agrawal, E. J. Denning, T. B. Woolf, and O. Beckstein.
-# MDAnalysis: A Toolkit for the Analysis of Molecular Dynamics Simulations.
-# J. Comput. Chem. 32 (2011), 2319--2327, doi:10.1002/jcc.21787
-#
-
-
-"""PDB structure files in MDAnalysis --- :mod:`MDAnalysis.coordinates.PDB`
-========================================================================
-
-MDAnalysis reads coordinates from PDB files and additional optional
-data such as B-factors. It is also possible to substitute a PDB file
-instead of PSF file in order to define the list of atoms (but no
-connectivity information will be available in this case).
-
-PDB files contain both coordinate and atom information. It is also possible to
-write trajectories as multi-frame (or multi-model) PDB files. This is not very
-space efficient but is sometimes the lowest common denominator for exchanging
-trajectories. Single frame and multi-frame PDB files are automatically
-recognized; the only difference is thath the single-frame PDB is represented as
-a trajectory with only one frame.
-
-In order to write a selection to a PDB file one typically uses the
-:meth:`MDAnalysis.core.groups.AtomGroup.write` method of the selection::
-
-  calphas = universe.select_atoms("name CA")
-  calphas.write("calpha_only.pdb")
-
-This uses the coordinates from the current timestep of the trajectory.
-
-In order to write a PDB trajectory one needs to first obtain a multi-frame
-writer (keyword *multiframe* = ``True``) and then iterate through the
-trajectory, while writing each frame::
-
-  calphas = universe.select_atoms("name CA")
-  with MDAnalysis.Writer("calpha_traj.pdb", multiframe=True) as W:
-      for ts in u.trajectory:
-          W.write(calphas)
-
-It is important to *always close the trajectory* when done because only at this
-step is the final END_ record written, which is required by the `PDB 3.3
-standard`_. Using the writer as a context manager ensures that this always
-happens.
-
-
-Capabilities
-------------
-
-A pure-Python implementation for PDB files commonly encountered in MD
-simulations comes under the names :class:`PDBReader` and :class:`PDBWriter`. It
-only implements a subset of the `PDB 3.3 standard`_ and also allows some
-typical enhancements such as 4-letter resids (introduced by CHARMM/NAMD).
-
-The :class:`PDBReader` can read multi-frame PDB files and represents
-them as a trajectory. The :class:`PDBWriter` can write single and
-multi-frame PDB files as specified by the *multiframe* keyword. By default, it
-writes single frames. On the other hand, the :class:`MultiPDBWriter` is set up
-to write a PDB trajectory by default (equivalent to using *multiframe* =
-``True``).
-
-
-Examples for working with PDB files
------------------------------------
-
-A **single frame PDB** can be written with the
-:meth:`~MDAnalysis.core.groups.AtomGroup.write` method of any
-:class:`~MDAnalysis.core.groups.AtomGroup`::
-
-   protein = u.select_atoms("protein")
-   protein.write("protein.pdb")
-
-Alternatively, get the single frame writer and supply the
-:class:`~MDAnalysis.core.groups.AtomGroup`::
-
-  protein = u.select_atoms("protein")
-  with MDAnalysis.Writer("protein.pdb") as pdb:
-      pdb.write(protein)
-
-In order to write a **multi-frame PDB trajectory** from a universe *u* one can
-do the following::
-
-  with MDAnalysis.Writer("all.pdb", multiframe=True) as pdb:
-      for ts in u.trajectory:
-          pdb.write(u)
-
-Similarly, writing only a protein::
-
-  protein = u.select_atoms("protein")
-  with MDAnalysis.Writer("protein.pdb", multiframe=True) as pdb:
-      for ts in u.trajectory:
-          pdb.write(protein)
-
-
-
-Classes
--------
-
-.. versionchanged:: 0.16.0
-   PDB readers and writers based on :class:`Bio.PDB.PDBParser` were retired and
-   removed.
-
-
-.. autoclass:: PDBReader
-   :members:
-
-.. autoclass:: PDBWriter
-   :members:
-
-   .. automethod:: _check_pdb_coordinates
-   .. automethod:: _write_pdb_bonds
-   .. automethod:: _update_frame
-   .. automethod:: _write_timestep
-
-.. autoclass:: MultiPDBWriter
-   :members:
-
-.. autoclass:: ExtendedPDBReader
-   :members:
-   :inherited-members:
-
-
-.. _`PDB 3.3 standard`:
-    http://www.wwpdb.org/documentation/file-format-content/format33/v3.3.html
-
 """
-from io import StringIO, BytesIO
-import os
-import errno
-import itertools
-import textwrap
-import warnings
+Aggregating results into DataPoints
+
+Copyright 2015 BlazeMeter Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+import copy
 import logging
-import collections
-import numpy as np
+import math
+import operator
+import re
+from abc import abstractmethod
+from collections import Counter
 
-from ..lib import util
-from . import base
-from ..topology.core import guess_atom_element
-from ..exceptions import NoDataError
-
-
-logger = logging.getLogger("MDAnalysis.coordinates.PBD")
-
-# Pairs of residue name / atom name in use to deduce PDB formatted atom names
-Pair = collections.namedtuple('Atom', 'resname name')
+from bzt import TaurusInternalException, TaurusConfigError
+from bzt.engine import Aggregator
+from bzt.six import iteritems
+from bzt.utils import BetterDict, dehumanize_time
 
 
-class PDBReader(base.ReaderBase):
-    """PDBReader that reads a `PDB-formatted`_ file, no frills.
-
-    The following *PDB records* are parsed (see `PDB coordinate section`_ for
-    details):
-
-     - *CRYST1* for unitcell A,B,C, alpha,beta,gamma
-     - *ATOM* or *HETATM* for serial,name,resName,chainID,resSeq,x,y,z,occupancy,tempFactor
-     - *HEADER* (:attr:`header`), *TITLE* (:attr:`title`), *COMPND*
-       (:attr:`compound`), *REMARK* (:attr:`remarks`)
-     - all other lines are ignored
-
-    Reads multi-`MODEL`_ PDB files as trajectories.
-
-    .. _PDB-formatted:
-       http://www.wwpdb.org/documentation/file-format-content/format33/v3.3.html
-    .. _PDB coordinate section:
-       http://www.wwpdb.org/documentation/file-format-content/format33/sect9.html
-    .. _MODEL:
-       http://www.wwpdb.org/documentation/file-format-content/format33/sect9.html#MODEL
-
-    =============  ============  ===========  =============================================
-    COLUMNS        DATA  TYPE    FIELD        DEFINITION
-    =============  ============  ===========  =============================================
-    1 -  6         Record name   "CRYST1"
-    7 - 15         Real(9.3)     a              a (Angstroms).
-    16 - 24        Real(9.3)     b              b (Angstroms).
-    25 - 33        Real(9.3)     c              c (Angstroms).
-    34 - 40        Real(7.2)     alpha          alpha (degrees).
-    41 - 47        Real(7.2)     beta           beta (degrees).
-    48 - 54        Real(7.2)     gamma          gamma (degrees).
-
-    1 -  6         Record name   "ATOM  "
-    7 - 11         Integer       serial       Atom  serial number.
-    13 - 16        Atom          name         Atom name.
-    17             Character     altLoc       Alternate location indicator.
-    18 - 21        Residue name  resName      Residue name.
-    22             Character     chainID      Chain identifier.
-    23 - 26        Integer       resSeq       Residue sequence number.
-    27             AChar         iCode        Code for insertion of residues.
-    31 - 38        Real(8.3)     x            Orthogonal coordinates for X in Angstroms.
-    39 - 46        Real(8.3)     y            Orthogonal coordinates for Y in Angstroms.
-    47 - 54        Real(8.3)     z            Orthogonal coordinates for Z in Angstroms.
-    55 - 60        Real(6.2)     occupancy    Occupancy.
-    61 - 66        Real(6.2)     tempFactor   Temperature  factor.
-    67 - 76        String        segID        (unofficial CHARMM extension ?)
-    77 - 78        LString(2)    element      Element symbol, right-justified.
-    79 - 80        LString(2)    charge       Charge  on the atom.
-    =============  ============  ===========  =============================================
-
-    Notes
-    -----
-    If a system does not have unit cell parameters (such as in electron
-    microscopy structures), the PDB file format requires the CRYST1_ field to
-    be provided with unitary values (cubic box with sides of 1 Å) and an
-    appropriate REMARK. If unitary values are found within the CRYST1_ field,
-    :code:`PDBReader` will not set unit cell dimensions (which will take the
-    default value :code:`np.zeros(6)`, see Issue #2698)
-    and it will warn the user.
-
-    .. _CRYST1: http://www.wwpdb.org/documentation/file-format-content/format33/sect8.html#CRYST1
-
-
-    See Also
-    --------
-    :class:`PDBWriter`
-    :class:`PDBReader`
-
-    .. versionchanged:: 0.11.0
-       * Frames now 0-based instead of 1-based
-       * New :attr:`title` (list with all TITLE lines).
-    .. versionchanged:: 0.19.1
-       Can now read PDB files with DOS line endings
-    .. versionchanged:: 0.20.0
-       Strip trajectory header of trailing spaces and newlines
-    .. versionchanged:: 1.0.0
-       Raise user warning for CRYST1_ record with unitary valuse
-       (cubic box with sides of 1 Å) and do not set cell dimensions.
+class KPISet(BetterDict):
     """
-    format = ['PDB', 'ENT']
-    units = {'time': None, 'length': 'Angstrom'}
-
-    def __init__(self, filename, **kwargs):
-        """Read coordinates from *filename*.
-
-        *filename* can be a gzipped or bzip2ed compressed PDB file.
-
-        If the pdb file contains multiple MODEL records then it is
-        read as a trajectory where the MODEL numbers correspond to
-        frame numbers.
-        """
-        super(PDBReader, self).__init__(filename, **kwargs)
-
-        try:
-            self.n_atoms = kwargs['n_atoms']
-        except KeyError:
-            # hackish, but should work and keeps things DRY
-            # regular MDA usage via Universe doesn't follow this route
-            from MDAnalysis.topology import PDBParser
-
-            with PDBParser.PDBParser(self.filename) as p:
-                top = p.parse()
-            self.n_atoms = top.n_atoms
-
-        self.model_offset = kwargs.pop("model_offset", 0)
-        # dummy/default variables as these are read
-        header = ""
-        title = []
-        compound = []
-        remarks = []
-
-        self.ts = self._Timestep(self.n_atoms, **self._ts_kwargs)
-
-        # Record positions in file of CRYST and MODEL headers
-        # then build frame offsets to start at the minimum of these
-        # This allows CRYST to come either before or after MODEL
-        # This assumes that **either**
-        # - pdbfile has a single CRYST (NVT)
-        # - pdbfile has a CRYST for every MODEL (NPT)
-        models = []
-        crysts = []
-
-        # hack for streamIO
-        if isinstance(filename, util.NamedStream) and isinstance(filename.stream, StringIO):
-            filename.stream = BytesIO(filename.stream.getvalue().encode())
-
-        pdbfile = self._pdbfile = util.anyopen(filename, 'rb')
-
-        line = "magical"
-        while line:
-            # need to use readline so tell gives end of line
-            # (rather than end of current chunk)
-            line = pdbfile.readline()
-
-            if line[:5] == b'MODEL':
-                models.append(pdbfile.tell())
-            elif line[:5] == b'CRYST':
-                # remove size of line to get **start** of CRYST line
-                crysts.append(pdbfile.tell() - len(line))
-            elif line[:6] == b'HEADER':
-                # classification = line[10:50]
-                # date = line[50:59]
-                # idCode = line[62:66]
-                header = line[10:66].strip().decode()
-            elif line[:5] == b'TITLE':
-                title.append(line[8:80].strip().decode())
-            elif line[:6] == b'COMPND':
-                compound.append(line[7:80].strip().decode())
-            elif line[:6] == b'REMARK':
-                remarks.append(line[6:].strip().decode())
-
-        end = pdbfile.tell()  # where the file ends
-
-        self.header = header
-        self.title = title
-        self.compound = compound
-        self.remarks = remarks
-
-        if not models:
-            # No model entries
-            # so read from start of file to read first frame
-            models.append(0)
-        if len(crysts) == len(models):
-            offsets = [min(a, b) for a, b in zip(models, crysts)]
-        else:
-            offsets = models
-        # Position of the start of each frame
-        self._start_offsets = offsets
-        # Position of the end of each frame
-        self._stop_offsets = offsets[1:] + [end]
-        self.n_frames = len(offsets)
-
-        self._read_frame(0)
-
-    def Writer(self, filename, **kwargs):
-        """Returns a PDBWriter for *filename*.
-
-        Parameters
-        ----------
-        filename : str
-            filename of the output PDB file
-
-        Returns
-        -------
-        :class:`PDBWriter`
-
-        """
-        kwargs.setdefault('multiframe', self.n_frames > 1)
-        return PDBWriter(filename, **kwargs)
-
-    def _reopen(self):
-        # Pretend the current TS is -1 (in 0 based) so "next" is the
-        # 0th frame
-        self.close()
-        self._pdbfile = util.anyopen(self.filename, 'rb')
-        self.ts.frame = -1
-
-    def _read_next_timestep(self, ts=None):
-        if ts is None:
-            ts = self.ts
-        else:
-            # TODO: cleanup _read_frame() to use a "free" Timestep
-            raise NotImplementedError("PDBReader cannot assign to a timestep")
-        # frame is 1-based. Normally would add 1 to frame before calling
-        # self._read_frame to retrieve the subsequent ts. But self._read_frame
-        # assumes it is being passed a 0-based frame, and adjusts.
-        frame = self.frame + 1
-        return self._read_frame(frame)
-
-    def _read_frame(self, frame):
-        """
-        Read frame from PDB file.
-
-        Notes
-        -----
-        When the CRYST1_ record has unitary values (cubic box with sides of
-        1 Å), cell dimensions are considered fictitious. An user warning is
-        raised and cell dimensions are set to
-        :code:`np.zeros(6)` (see Issue #2698)
-
-        .. versionchanged:: 1.0.0
-           Raise user warning for CRYST1_ record with unitary valuse
-           (cubic box with sides of 1 Å) and do not set cell dimensions.
-        """
-        try:
-            start = self._start_offsets[frame]
-            stop = self._stop_offsets[frame]
-        except IndexError:  # out of range of known frames
-            raise IOError from None
-
-        pos = 0
-        occupancy = np.ones(self.n_atoms)
-
-        # Seek to start and read until start of next frame
-        self._pdbfile.seek(start)
-        chunk = self._pdbfile.read(stop - start).decode()
-
-        tmp_buf = []
-        for line in chunk.splitlines():
-            if line[:6] in ('ATOM  ', 'HETATM'):
-                # we only care about coordinates
-                tmp_buf.append([line[30:38], line[38:46], line[46:54]])
-                # TODO import bfactors - might these change?
-                try:
-                    # does an implicit str -> float conversion
-                    occupancy[pos] = line[54:60]
-                except ValueError:
-                    # Be tolerant for ill-formated or empty occupancies
-                    pass
-                pos += 1
-            elif line[:6] == 'CRYST1':
-                # does an implicit str -> float conversion
-                try:
-                    cell_dims = np.array([line[6:15], line[15:24],
-                                         line[24:33], line[33:40],
-                                         line[40:47], line[47:54]],
-                                         dtype=np.float32)
-                except ValueError:
-                    warnings.warn("Failed to read CRYST1 record, "
-                                  "possibly invalid PDB file, got:\n{}"
-                                  "".format(line))
-                else:
-                    if np.allclose(cell_dims, np.array([1.0, 1.0, 1.0, 90.0, 90.0, 90.0])):
-                        # FIXME: Dimensions set to zeros.
-                        # FIXME: This might change with Issue #2698
-                        warnings.warn("1 A^3 CRYST1 record,"
-                                      " this is usually a placeholder."
-                                      " Unit cell dimensions will be set"
-                                      " to zeros.")
-                    else:
-                        self.ts._unitcell[:] = cell_dims
-
-        # check if atom number changed
-        if pos != self.n_atoms:
-            raise ValueError("Inconsistency in file '{}': The number of atoms "
-                             "({}) in trajectory frame {} differs from the "
-                             "number of atoms ({}) in the corresponding "
-                             "topology.\nTrajectories with varying numbers of "
-                             "atoms are currently not supported."
-                             "".format(self.filename, pos, frame, self.n_atoms))
-
-        # doing the conversion from list to array at the end is faster
-        self.ts.positions = tmp_buf
-
-        if self.convert_units:
-            # both happen inplace
-            self.convert_pos_from_native(self.ts._pos)
-            self.convert_pos_from_native(self.ts._unitcell[:3])
-        self.ts.frame = frame
-        self.ts.data['occupancy'] = occupancy
-        return self.ts
-
-    def close(self):
-        self._pdbfile.close()
-
-
-class PDBWriter(base.WriterBase):
-    """PDB writer that implements a subset of the `PDB 3.3 standard`_ .
-
-    PDB format as used by NAMD/CHARMM: 4-letter resnames and segID are allowed,
-    altLoc is written.
-
-    The :class:`PDBWriter` can be used to either dump a coordinate
-    set to a PDB file (operating as a "single frame writer", selected with the
-    constructor keyword *multiframe* = ``False``, the default) or by writing a
-    PDB "movie" (multi frame mode, *multiframe* = ``True``), consisting of
-    multiple models (using the MODEL_ and ENDMDL_ records).
-
-    .. _`PDB 3.3 standard`:
-       http://www.wwpdb.org/documentation/file-format-content/format33/v3.3.html
-    .. _ATOM: http://www.wwpdb.org/documentation/file-format-content/format33/sect9.html#ATOM
-    .. _COMPND: http://www.wwpdb.org/documentation/file-format-content/format33/sect2.html#COMPND
-    .. _CONECT: http://www.wwpdb.org/documentation/file-format-content/format33/sect10.html#CONECT
-    .. _END: http://www.wwpdb.org/documentation/file-format-content/format33/sect11.html#END
-    .. _ENDMDL: http://www.wwpdb.org/documentation/file-format-content/format33/sect9.html#ENDMDL
-    .. _HEADER: http://www.wwpdb.org/documentation/file-format-content/format33/sect2.html#HEADER
-    .. _HETATM: http://www.wwpdb.org/documentation/file-format-content/format33/sect9.html#HETATM
-    .. _MODEL: http://www.wwpdb.org/documentation/file-format-content/format33/sect9.html#MODEL
-    .. _NUMMDL: http://www.wwpdb.org/documentation/file-format-content/format33/sect2.html#NUMMDL
-    .. _REMARKS: http://www.wwpdb.org/documentation/file-format-content/format33/remarks.html
-    .. _TITLE: http://www.wwpdb.org/documentation/file-format-content/format33/sect2.html#TITLE
-
-    Note
-    ----
-    Writing bonds currently only works when writing a whole :class:`Universe`
-    and if bond information is available in the topology.  (For selections
-    smaller than the whole :class:`Universe`, the atom numbering in the CONECT_
-    records would not match the numbering of the atoms in the new PDB file and
-    therefore a :exc:`NotImplementedError` is raised.)
-
-    The maximum frame number that can be stored in a PDB file is 9999 and it
-    will wrap around (see :meth:`MODEL` for further details).
-
-    The CRYST1_ record specifies the unit cell. This record is set to
-    unitary values (cubic box with sides of 1 Å) if unit cell dimensions
-    are not set (:code:`None` or :code:`np.zeros(6)`,
-    see Issue #2698).
-
-    When the :attr:`record_types` attribute is present (e.g. Universe object
-    was created by loading a PDB file), ATOM_ and HETATM_ record type
-    keywords are written out accordingly. Otherwise, the ATOM_ record type
-    is the default output.
-
-    The CONECT_ record is written out, if required, when the output stream
-    is closed.
-
-    See Also
-    --------
-    This class is identical to :class:`MultiPDBWriter` with the one
-    exception that it defaults to writing single-frame PDB files as if
-    `multiframe` = ``False`` was selected.
-
-
-    .. versionchanged:: 0.7.5
-       Initial support for multi-frame PDB files.
-
-    .. versionchanged:: 0.7.6
-       The *multiframe* keyword was added to select the writing mode. The
-       writing of bond information (CONECT_ records) is now disabled by default
-       but can be enabled with the *bonds* keyword.
-
-    .. versionchanged:: 0.11.0
-       Frames now 0-based instead of 1-based
-
-    .. versionchanged:: 0.14.0
-       PDB doesn't save charge information
-
-    .. versionchanged:: 0.20.0
-       Strip trajectory header of trailing spaces and newlines
-
-    .. versionchanged:: 1.0.0
-       ChainID now comes from the last character of segid, as stated in the documentation.
-       An indexing issue meant it previously used the first charater (Issue #2224)
-
-    .. versionchanged:: 2.0.0
-        Add the `redindex` argument. Setting this keyword to ``True``
-        (the default) preserves the behavior in earlier versions of MDAnalysis.
-
+    Main entity in results, contains all KPIs for single label,
+    capable of merging other KPISet's into it to compose cumulative results
     """
-    fmt = {
-        'ATOM': (
-            "ATOM  {serial:5d} {name:<4s}{altLoc:<1s}{resName:<4s}"
-            "{chainID:1s}{resSeq:4d}{iCode:1s}"
-            "   {pos[0]:8.3f}{pos[1]:8.3f}{pos[2]:8.3f}{occupancy:6.2f}"
-            "{tempFactor:6.2f}      {segID:<4s}{element:>2s}\n"),
-        'HETATM': (
-            "HETATM{serial:5d} {name:<4s}{altLoc:<1s}{resName:<4s}"
-            "{chainID:1s}{resSeq:4d}{iCode:1s}"
-            "   {pos[0]:8.3f}{pos[1]:8.3f}{pos[2]:8.3f}{occupancy:6.2f}"
-            "{tempFactor:6.2f}      {segID:<4s}{element:>2s}\n"),
-        'REMARK': "REMARK     {0}\n",
-        'COMPND': "COMPND    {0}\n",
-        'HEADER': "HEADER    {0}\n",
-        'TITLE': "TITLE     {0}\n",
-        'MODEL': "MODEL     {0:>4d}\n",
-        'NUMMDL': "NUMMDL    {0:5d}\n",
-        'ENDMDL': "ENDMDL\n",
-        'END': "END\n",
-        'CRYST1': ("CRYST1{box[0]:9.3f}{box[1]:9.3f}{box[2]:9.3f}"
-                   "{ang[0]:7.2f}{ang[1]:7.2f}{ang[2]:7.2f} "
-                   "{spacegroup:<11s}{zvalue:4d}\n"),
-        'CONECT': "CONECT{0}\n"
-    }
-    format = ['PDB', 'ENT']
-    units = {'time': None, 'length': 'Angstrom'}
-    pdb_coor_limits = {"min": -999.9995, "max": 9999.9995}
-    #: wrap comments into REMARK records that are not longer than
-    # :attr:`remark_max_length` characters.
-    remark_max_length = 66
-    multiframe = False
+    ERRORS = "errors"
+    SAMPLE_COUNT = "throughput"
+    CONCURRENCY = "concurrency"
+    SUCCESSES = "succ"
+    FAILURES = "fail"
+    BYTE_COUNT = "bytes"
+    RESP_TIMES = "rt"
+    AVG_RESP_TIME = "avg_rt"
+    STDEV_RESP_TIME = "stdev_rt"
+    AVG_LATENCY = "avg_lt"
+    AVG_CONN_TIME = "avg_ct"
+    PERCENTILES = "perc"
+    RESP_CODES = "rc"
+    ERRTYPE_ERROR = 0
+    ERRTYPE_ASSERT = 1
 
-    # These attributes are used to deduce how to format the atom name.
-    ions = ('FE', 'AS', 'ZN', 'MG', 'MN', 'CO', 'BR',
-            'CU', 'TA', 'MO', 'AL', 'BE', 'SE', 'PT',
-            'EU', 'NI', 'IR', 'RH', 'AU', 'GD', 'RU')
-    # Mercurial can be confused for hydrogen gamma. Yet, mercurial is
-    # rather rare in the PDB. Here are all the residues that contain
-    # mercurial.
-    special_hg = ('CMH', 'EMC', 'MBO', 'MMC', 'HGB', 'BE7', 'PMB')
-    # Chloride can be confused for a carbon. Here are the residues that
-    # contain chloride.
-    special_cl = ('0QE', 'CPT', 'DCE', 'EAA', 'IMN', 'OCZ', 'OMY', 'OMZ',
-                  'UN9', '1N1', '2T8', '393', '3MY', 'BMU', 'CLM', 'CP6',
-                  'DB8', 'DIF', 'EFZ', 'LUR', 'RDC', 'UCL', 'XMM', 'HLT',
-                  'IRE', 'LCP', 'PCI', 'VGH')
-    # In these pairs, the atom name is aligned on the first column
-    # (column 13).
-    include_pairs = (Pair('OEC', 'CA1'),
-                     Pair('PLL', 'PD'),
-                     Pair('OEX', 'CA1'))
-    # In these pairs, the atom name is aligned on the second column
-    # (column 14), but other rules would align them on the first column.
-    exclude_pairs = (Pair('C14', 'C14'), Pair('C15', 'C15'),
-                     Pair('F9F', 'F9F'), Pair('OAN', 'OAN'),
-                     Pair('BLM', 'NI'), Pair('BZG', 'CO'),
-                     Pair('BZG', 'NI'), Pair('VNL', 'CO1'),
-                     Pair('VNL', 'CO2'), Pair('PF5', 'FE1'),
-                     Pair('PF5', 'FE2'), Pair('UNL', 'UNL'))
+    def __init__(self, perc_levels=()):
+        super(KPISet, self).__init__()
+        self.sum_rt = 0
+        self.sum_lt = 0
+        self.sum_cn = 0
+        self.perc_levels = perc_levels
+        # scalars
+        self.get(self.SAMPLE_COUNT, 0)
+        self.get(self.CONCURRENCY, 0)
+        self.get(self.SUCCESSES, 0)
+        self.get(self.FAILURES, 0)
+        self.get(self.AVG_RESP_TIME, 0)
+        self.get(self.STDEV_RESP_TIME, 0)
+        self.get(self.AVG_LATENCY, 0)
+        self.get(self.AVG_CONN_TIME, 0)
+        self.get(self.BYTE_COUNT, 0)
+        # vectors
+        self.get(self.ERRORS, [])
+        self.get(self.RESP_TIMES, Counter())
+        self.get(self.RESP_CODES, Counter())
+        self.get(self.PERCENTILES)
+        self._concurrencies = BetterDict()  # NOTE: shouldn't it be Counter?
+        self.rt_dist_maxlen = 1000  # TODO: parameterize it
 
-    def __init__(self, filename, bonds="conect", n_atoms=None, start=0, step=1,
-                 remarks="Created by PDBWriter",
-                 convert_units=True, multiframe=None, reindex=True):
-        """Create a new PDBWriter
+    def __deepcopy__(self, memo):
+        mycopy = KPISet(self.perc_levels)
+        mycopy.sum_rt = self.sum_rt
+        mycopy.sum_lt = self.sum_lt
+        mycopy.sum_cn = self.sum_cn
+        for key, val in iteritems(self):
+            mycopy[key] = copy.deepcopy(val, memo)
+        return mycopy
 
-        Parameters
-        ----------
-        filename: str
-           name of output file
-        start: int (optional)
-           starting timestep (the first frame will have MODEL number `start` + 1
-           because the PDB standard prescribes MODEL numbers starting at 1)
-        step: int (optional)
-           skip between subsequent timesteps
-        remarks: str (optional)
-           comments to annotate pdb file (added to the *TITLE* record); note that
-           any remarks from the trajectory that serves as input are
-           written to REMARK records with lines longer than :attr:`remark_max_length` (66
-           characters) being wrapped.
-        convert_units: bool (optional)
-           units are converted to the MDAnalysis base format; [``True``]
-        bonds : {"conect", "all", None} (optional)
-           If set to "conect", then only write those bonds that were already
-           defined in an input PDB file as PDB CONECT_ record. If set to "all",
-           write all bonds (including guessed ones) to the file. ``None`` does
-           not write any bonds. The default is "conect".
-        multiframe: bool (optional)
-           ``False``: write a single frame to the file; ``True``: create a
-           multi frame PDB file in which frames are written as MODEL_ ... ENDMDL_
-           records. If ``None``, then the class default is chosen.    [``None``]
-        reindex: bool (optional)
-            If ``True`` (default), the atom serial is set to be consecutive
-            numbers starting at 1. Else, use the atom id.
-
+    @staticmethod
+    def error_item_skel(error, ret_c, cnt, errtype, urls):
         """
-        # n_atoms = None : dummy keyword argument
-        # (not used, but Writer() always provides n_atoms as the second argument)
 
-        # TODO: - remarks should be a list of lines and written to REMARK
-        #       - additional title keyword could contain line for TITLE
-
-        self.filename = filename
-        # convert length and time to base units
-        self.convert_units = convert_units
-        self._multiframe = self.multiframe if multiframe is None else multiframe
-        self.bonds = bonds
-        self._reindex = reindex
-
-        if start < 0:
-            raise ValueError("'Start' must be a positive value")
-
-        self.start = self.frames_written = start
-        self.step = step
-        self.remarks = remarks
-
-        self.pdbfile = util.anyopen(self.filename, 'wt')  # open file on init
-        self.has_END = False
-        self.first_frame_done = False
-
-    def close(self):
+        :type error: str
+        :type ret_c: str
+        :type cnt: int
+        :type errtype: int
+        :type urls: Counter
+        :rtype: dict
         """
-        Close PDB file and write CONECT and END record
+        return {
+            "cnt": cnt,
+            "msg": error,
+            "rc": ret_c,
+            "type": errtype,
+            "urls": urls
+        }
 
-
-        .. versionchanged:: 2.0.0
-           CONECT_ record written just before END_ record
+    def add_sample(self, sample):
         """
-        if hasattr(self, 'pdbfile') and self.pdbfile is not None:
-            if not self.has_END:
-                self._write_pdb_bonds()
-                self.END()
+        Add sample, consisting of: cnc, rt, cn, lt, rc, error, trname, byte_count
+
+        :type sample: tuple
+        """
+        # TODO: introduce a flag to not count failed in resp times? or offer it always?
+        cnc, r_time, con_time, latency, r_code, error, trname, byte_count = sample
+        self[self.SAMPLE_COUNT] += 1
+        if cnc:
+            self._concurrencies[trname] = cnc
+
+        if r_code is not None:
+            self[self.RESP_CODES][r_code] += 1
+
+            # count times only if we have RCs
+            if con_time:
+                self.sum_cn += con_time
+            self.sum_lt += latency
+            self.sum_rt += r_time
+
+        if error is not None:
+            self[self.FAILURES] += 1
+
+            item = self.error_item_skel(error, r_code, 1, KPISet.ERRTYPE_ERROR, Counter())
+            self.inc_list(self[self.ERRORS], ("msg", error), item)
+        else:
+            self[self.SUCCESSES] += 1
+
+        self[self.RESP_TIMES][r_time] += 1
+
+        if byte_count is not None:
+            self[self.BYTE_COUNT] += byte_count
+            # TODO: max/min rt? there is percentiles...
+            # TODO: throughput if interval is not 1s
+
+    @staticmethod
+    def inc_list(values, selector, value):
+        """
+        Increment list item, based on selector criteria
+
+        :param values: list to update
+        :param selector: tuple of 2 values, field name and value to match
+        :param value: dict to put into list
+        :type values: list[dict]
+        :type selector: tuple
+        :type value: dict
+        """
+        found = False
+        for item in values:
+            if item[selector[0]] == selector[1]:
+                item['cnt'] += value['cnt']
+                item['urls'] += value['urls']
+                found = True
+                break
+
+        if not found:
+            values.append(copy.deepcopy(value))
+
+    def recalculate(self):
+        """
+        Recalculate averages, stdev and percentiles
+
+        :return:
+        """
+        self._compact_times()
+
+        if self[self.SAMPLE_COUNT]:
+            self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]
+            self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]
+            self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]
+
+        if len(self._concurrencies):
+            self[self.CONCURRENCY] = sum(self._concurrencies.values())
+
+        perc, stdev = self.__perc_and_stdev(self[self.RESP_TIMES], self.perc_levels, self[self.AVG_RESP_TIME])
+        for level, val in perc:
+            self[self.PERCENTILES][str(float(level))] = val
+
+        self[self.STDEV_RESP_TIME] = stdev
+
+        return self
+
+    def _compact_times(self):
+        times = self[KPISet.RESP_TIMES]
+        redundant_cnt = len(times) - self.rt_dist_maxlen
+        if redundant_cnt > 0:
+            logging.debug("Compacting %s response timing into %s", len(times), self.rt_dist_maxlen)
+
+        while redundant_cnt > 0:
+            keys = sorted(times.keys())
+            distances = [(lidx, keys[lidx + 1] - keys[lidx]) for lidx in range(len(keys) - 1)]
+            distances.sort(key=operator.itemgetter(1))  # sort by distance
+
+            # cast candidates for consolidation
+            lkeys_indexes = [lidx for lidx, _ in distances[:redundant_cnt]]
+
+            while lkeys_indexes:
+                lidx = lkeys_indexes.pop(0)
+                lkey = keys[lidx]
+                rkey = keys[lidx + 1]
+                if lkey in times and rkey in times:  # neighbours aren't changed
+                    lval = times.pop(lkey)
+                    rval = times.pop(rkey)
+
+                    # shift key proportionally to values
+                    idx_new = lkey + (rkey - lkey) * float(rval) / (lval + rval)
+
+                    # keep precision the same
+                    lprec = len(str(math.modf(lkey)[0])) - 2
+                    rprec = len(str(math.modf(rkey)[0])) - 2
+                    idx_new = round(idx_new, max(lprec, rprec))
+
+                    times[idx_new] = lval + rval
+                    redundant_cnt -= 1
+
+    def merge_kpis(self, src, sid=None):
+        """
+        Merge other instance into self
+
+        :param sid: source ID to use when suming up concurrency
+        :type src: KPISet
+        :return:
+        """
+        src.recalculate()
+
+        self.sum_cn += src.sum_cn
+        self.sum_lt += src.sum_lt
+        self.sum_rt += src.sum_rt
+
+        self[self.SAMPLE_COUNT] += src[self.SAMPLE_COUNT]
+        self[self.SUCCESSES] += src[self.SUCCESSES]
+        self[self.FAILURES] += src[self.FAILURES]
+        self[self.BYTE_COUNT] += src[self.BYTE_COUNT]
+        # NOTE: should it be average? mind the timestamp gaps
+        if src[self.CONCURRENCY]:
+            self._concurrencies[sid] = src[self.CONCURRENCY]
+
+        if src[self.RESP_TIMES]:
+            # using raw times to calculate percentiles
+            self[self.RESP_TIMES].update(src[self.RESP_TIMES])
+        elif not self[self.PERCENTILES]:
+            # using existing percentiles
+            # FIXME: it's not valid to overwrite, better take average
+            self[self.PERCENTILES] = copy.deepcopy(src[self.PERCENTILES])
+
+        self[self.RESP_CODES].update(src[self.RESP_CODES])
+
+        for src_item in src[self.ERRORS]:
+            self.inc_list(self[self.ERRORS], ('msg', src_item['msg']), src_item)
+
+    @staticmethod
+    def from_dict(obj):
+        """
+
+        :type obj: dict
+        :rtype: KPISet
+        """
+        inst = KPISet()
+        for key, val in iteritems(obj):
+            inst[key] = val
+        inst.sum_cn = obj[inst.AVG_CONN_TIME] * obj[inst.SAMPLE_COUNT]
+        inst.sum_lt = obj[inst.AVG_LATENCY] * obj[inst.SAMPLE_COUNT]
+        inst.sum_rt = obj[inst.AVG_RESP_TIME] * obj[inst.SAMPLE_COUNT]
+        inst.perc_levels = [float(x) for x in inst[inst.PERCENTILES].keys()]
+        inst[inst.RESP_TIMES] = {float(level): inst[inst.RESP_TIMES][level] for level in inst[inst.RESP_TIMES].keys()}
+        for error in inst[KPISet.ERRORS]:
+            error['urls'] = Counter(error['urls'])
+        return inst
+
+    @staticmethod
+    def __perc_and_stdev(cnts_dict, percentiles_to_calc=(), avg=0):
+        """
+        from http://stackoverflow.com/questions/25070086/percentiles-from-counts-of-values
+        Returns [(percentile, value)] with nearest rank percentiles.
+        Percentile 0: <min_value>, 100: <max_value>.
+        cnts_dict: { <value>: <count> }
+        percentiles_to_calc: iterable for percentiles to calculate; 0 <= ~ <= 100
+
+        upd: added stdev calc to have it in single-pass for mans of efficiency
+
+        :type percentiles_to_calc: list(float)
+        :type cnts_dict: collections.Counter
+        """
+        assert all(0 <= percentile <= 100 for percentile in percentiles_to_calc)
+        percentiles = []
+        if not cnts_dict:
+            return percentiles, 0
+
+        num = sum(cnts_dict.values())
+        cnts = sorted(cnts_dict.items())
+        curr_cnts_pos = 0  # current position in cnts
+        curr_pos = cnts[0][1]  # sum of freqs up to current_cnts_pos
+
+        sqr_diffs = 0
+        for percentile in sorted(percentiles_to_calc):
+            if percentile < 100:
+                percentile_pos = percentile / 100.0 * num
+                while curr_pos <= percentile_pos and curr_cnts_pos < len(cnts):
+                    sqr_diffs += cnts[curr_cnts_pos][1] * math.pow(cnts[curr_cnts_pos][0] - avg, 2)
+
+                    curr_cnts_pos += 1
+                    curr_pos += cnts[curr_cnts_pos][1]
+
+                percentiles.append((percentile, cnts[curr_cnts_pos][0]))
             else:
-                logger.warning("END record has already been written"
-                               " before the final closing of the file")
-            self.pdbfile.close()
-        self.pdbfile = None
+                percentiles.append((percentile, cnts[-1][0]))  # we could add a small value
 
-    def _write_pdb_title(self):
-        if self._multiframe:
-            self.TITLE("MDANALYSIS FRAMES FROM {0:d}, STEP {1:d}: {2!s}"
-                       "".format(self.start, self.step, self.remarks))
-        else:
-            self.TITLE("MDANALYSIS FRAME {0:d}: {1!s}"
-                       "".format(self.start, self.remarks))
+        while curr_cnts_pos < len(cnts):
+            sqr_diffs += cnts[curr_cnts_pos][1] * math.pow(cnts[curr_cnts_pos][0] - avg, 2)
+            curr_cnts_pos += 1
 
-    def _write_pdb_header(self):
-        """
-        Write PDB header.
+        stdev = math.sqrt(sqr_diffs / len(cnts))
+        return percentiles, stdev
 
-        The HEADER_ record is set to :code: `trajectory.header`.
-        The TITLE_ record explicitly mentions MDAnalysis and contains
-        information about trajectory frame(s).
-        The COMPND_ record is set to :code:`trajectory.compound`.
-        The REMARKS_ records are set to :code:`u.trajectory.remarks`
-        The CRYST1_ record specifies the unit cell. This record is set to
-        unitary values (cubic box with sides of 1 Å) if unit cell dimensions
-        are not set.
 
-        .. versionchanged: 1.0.0
-           Fix writing of PDB file without unit cell dimensions (Issue #2679).
-           If cell dimensions are not found, unitary values (cubic box with
-           sides of 1 Å) are used (PDB standard for CRYST1_).
-        """
-
-        if self.first_frame_done is True:
-            return
-
-        self.first_frame_done = True
-        u = self.obj.universe
-        self.HEADER(u.trajectory)
-
-        self._write_pdb_title()
-
-        self.COMPND(u.trajectory)
-        try:
-            # currently inconsistent: DCDReader gives a string,
-            # PDB*Reader a list, so always get a list
-            # split long single lines into chunks of 66 chars
-            remarks = []
-            for line in util.asiterable(u.trajectory.remarks):
-                remarks.extend(textwrap.wrap(line, self.remark_max_length))
-            self.REMARK(*remarks)
-        except AttributeError:
-            pass
-
-        # FIXME: Values for meaningless cell dimensions are not consistent.
-        # FIXME: See Issue #2698. Here we check for both None and zeros
-        if u.dimensions is None or np.allclose(u.dimensions, np.zeros(6)):
-            # Unitary unit cell by default. See PDB standard:
-            # http://www.wwpdb.org/documentation/file-format-content/format33/sect8.html#CRYST1
-            self.CRYST1(np.array([1.0, 1.0, 1.0, 90.0, 90.0, 90.0]))
-
-            # Add CRYST1 REMARK (285)
-            # The SCALE record is not included
-            # (We are only implementing a subset of the PDB standard)
-            self.REMARK("285 UNITARY VALUES FOR THE UNIT CELL AUTOMATICALLY SET")
-            self.REMARK("285 BY MDANALYSIS PDBWRITER BECAUSE UNIT CELL INFORMATION")
-            self.REMARK("285 WAS MISSING.")
-            self.REMARK("285 PROTEIN DATA BANK CONVENTIONS REQUIRE THAT")
-            self.REMARK("285 CRYST1 RECORD IS INCLUDED, BUT THE VALUES ON")
-            self.REMARK("285 THIS RECORD ARE MEANINGLESS.")
-
-            warnings.warn("Unit cell dimensions not found. "
-                          "CRYST1 record set to unitary values.")
-
-        else:
-            self.CRYST1(self.convert_dimensions_to_unitcell(u.trajectory.ts))
-
-    def _check_pdb_coordinates(self):
-        """Check if the coordinate values fall within the range allowed for PDB files.
-
-        Deletes the output file if this is the first frame or if frames have
-        already been written (in multi-frame mode) adds a REMARK instead of the
-        coordinates and closes the file.
-
-        Raises
-        ------
-        ValueError
-            if the coordinates fail the check.
-
-        .. versionchanged: 1.0.0
-            Check if :attr:`filename` is `StringIO` when attempting to remove
-            a PDB file with invalid coordinates (Issue #2512)
-        """
-        atoms = self.obj.atoms  # make sure to use atoms (Issue 46)
-        # can write from selection == Universe (Issue 49)
-        coor = atoms.positions
-
-        # check if any coordinates are illegal (coordinates are already in
-        # Angstroem per package default)
-        if self.has_valid_coordinates(self.pdb_coor_limits, coor):
-            return True
-        # note the precarious close() here: we know that the file is open and
-        # we now prepare to remove what we have already written (header and
-        # such) or add a REMARK (which allows the user to look at the
-        # previously written frames)
-        if self.frames_written > 1:
-            self.REMARK("Incomplete multi-frame trajectory.",
-                        "Coordinates for the current frame cannot be "
-                        "represented in the PDB format.")
-            self.close()
-        else:
-            self.close()
-            try:
-                os.remove(self.filename)
-            except OSError as err:
-                if err.errno == errno.ENOENT:
-                    pass
-                else:
-                    raise
-            except TypeError:
-                if isinstance(self.filename, StringIO):
-                    pass
-                else:
-                    raise
-
-        raise ValueError("PDB files must have coordinate values between "
-                         "{0:.3f} and {1:.3f} Angstroem: file writing was "
-                         "aborted.".format(self.pdb_coor_limits["min"],
-                                           self.pdb_coor_limits["max"]))
-
-    def _write_pdb_bonds(self):
-        """Writes out all the bond records"""
-        if self.bonds is None:
-            return
-
-        if (not hasattr(self, "obj") or
-                not self.obj or
-                not hasattr(self.obj.universe, 'bonds')):
-            return
-
-        bondset = set(itertools.chain(*(a.bonds for a in self.obj.atoms)))
-        if self._reindex:
-            index_attribute = 'index'
-            mapping = {
-                index: i
-                for i, index in enumerate(self.obj.atoms.indices, start=1)
-            }
-            atoms = np.sort(self.obj.atoms.indices)
-        else:
-            index_attribute = 'id'
-            mapping = {id_: id_ for id_ in self.obj.atoms.ids}
-            atoms = np.sort(self.obj.atoms.ids)
-        if self.bonds == "conect":
-            # Write out only the bonds that were defined in CONECT records
-            bonds = (
-                (
-                    getattr(bond[0], index_attribute),
-                    getattr(bond[1], index_attribute),
-                )
-                for bond in bondset if not bond.is_guessed
-            )
-        elif self.bonds == "all":
-            bonds = (
-                (
-                    getattr(bond[0], index_attribute),
-                    getattr(bond[1], index_attribute),
-                )
-                for bond in bondset
-            )
-        else:
-            raise ValueError("bonds has to be either None, 'conect' or 'all'")
-
-        con = collections.defaultdict(list)
-        for a1, a2 in bonds:
-            if not (a1 in mapping and a2 in mapping):
-                continue
-            con[a2].append(a1)
-            con[a1].append(a2)
-
-        conect = ([mapping[a]] + sorted([mapping[at] for at in con[a]])
-                  for a in atoms if a in con)
-
-        for c in conect:
-            self.CONECT(c)
-
-    def _update_frame(self, obj):
-        """Method to initialize important attributes in writer from a AtomGroup or Universe *obj*.
-
-        Attributes initialized/updated:
-
-        * :attr:`PDBWriter.obj` (the entity that provides topology information *and*
-          coordinates, either a :class:`~MDAnalysis.core.groups.AtomGroup` or a whole
-          :class:`~MDAnalysis.core.universe.Universe`)
-        * :attr:`PDBWriter.trajectory` (the underlying trajectory
-          :class:`~MDAnalysis.coordinates.base.Reader`)
-        * :attr:`PDBWriter.timestep` (the underlying trajectory
-          :class:`~MDAnalysis.coordinates.base.Timestep`)
-
-        Before calling :meth:`_write_next_frame` this method **must** be
-        called at least once to enable extracting topology information from the
-        current frame.
-        """
-        if isinstance(obj, base.Timestep):
-            raise TypeError("PDBWriter cannot write Timestep objects "
-                            "directly, since they lack topology information ("
-                            "atom names and types) required in PDB files")
-        if len(obj.atoms) == 0:
-            raise IndexError("Cannot write empty AtomGroup")
-
-        # remember obj for some of other methods --- NOTE: this is an evil/lazy
-        # hack...
-        self.obj = obj
-        self.ts = obj.universe.trajectory.ts
-
-    def write(self, obj):
-        """Write object *obj* at current trajectory frame to file.
-
-        *obj* can be a selection (i.e. a
-        :class:`~MDAnalysis.core.groups.AtomGroup`) or a whole
-        :class:`~MDAnalysis.core.universe.Universe`.
-
-        The last letter of the :attr:`~MDAnalysis.core.groups.Atom.segid` is
-        used as the PDB chainID (but see :meth:`~PDBWriter.ATOM` for
-        details).
-
-        Parameters
-        ----------
-        obj
-            The :class:`~MDAnalysis.core.groups.AtomGroup` or
-            :class:`~MDAnalysis.core.universe.Universe` to write.
-        """
-        warnings.warn("Using the last letter of the segid for the chainID "
-                      "is now deprecated and will be changed in 2.0. "
-                      "In 2.0, the chainID attribute will be used if it "
-                      "exists, or a placeholder value.", DeprecationWarning)
-
-        self._update_frame(obj)
-        self._write_pdb_header()
-        # Issue 105: with write() ONLY write a single frame; use
-        # write_all_timesteps() to dump everything in one go, or do the
-        # traditional loop over frames
-        self._write_next_frame(self.ts, multiframe=self._multiframe)
-        # END and CONECT records are written when file is being close()d
-
-    def write_all_timesteps(self, obj):
-        """Write all timesteps associated with *obj* to the PDB file.
-
-        *obj* can be a :class:`~MDAnalysis.core.groups.AtomGroup`
-        or a :class:`~MDAnalysis.core.universe.Universe`.
-
-        The method writes the frames from the one specified as *start* until
-        the end, using a step of *step* (*start* and *step* are set in the
-        constructor). Thus, if *u* is a Universe then ::
-
-           u.trajectory[-2]
-           pdb = PDBWriter("out.pdb", u.atoms.n_atoms)
-           pdb.write_all_timesteps(u)
-
-        will write a PDB trajectory containing the last 2 frames and ::
-
-           pdb = PDBWriter("out.pdb", u.atoms.n_atoms, start=12, step=2)
-           pdb.write_all_timesteps(u)
-
-        will be writing frames 12, 14, 16, ...
-
-
-        .. versionchanged:: 0.11.0
-           Frames now 0-based instead of 1-based
-
-        .. versionchanged:: 2.0.0
-           CONECT_ record moved to :meth:`close`
-        """
-
-        self._update_frame(obj)
-        self._write_pdb_header()
-
-        start, step = self.start, self.step
-        traj = obj.universe.trajectory
-
-        # Start from trajectory[0]/frame 0, if there are more than 1 frame.
-        # If there is only 1 frame, the traj.frames is not like a python list:
-        # accessing trajectory[-1] raises key error.
-        if not start and traj.n_frames > 1:
-            start = traj.frame
-
-        for framenumber in range(start, len(traj), step):
-            traj[framenumber]
-            self._write_next_frame(self.ts, multiframe=True)
-
-        # CONECT record is written when the file is being close()d
-        self.close()
-
-        # Set the trajectory to the starting position
-        traj[start]
-
-    def _write_next_frame(self, ts=None, **kwargs):
-        '''write a new timestep to the PDB file
-
-        :Keywords:
-          *ts*
-             :class:`base.Timestep` object containing coordinates to be written to trajectory file;
-             if ``None`` then :attr:`PDBWriter.ts`` is tried.
-          *multiframe*
-             ``False``: write a single frame (default); ``True`` behave as a trajectory writer
-
-        .. Note::
-
-           Before using this method with another :class:`base.Timestep` in the *ts*
-           argument, :meth:`PDBWriter._update_frame` *must* be called
-           with the :class:`~MDAnalysis.core.groups.AtomGroup.Universe` as
-           its argument so that topology information can be gathered.
-
-
-        .. versionchanged:: 1.0.0
-           Renamed from `write_next_timestep` to `_write_next_frame`.
-        '''
-        if ts is None:
-            try:
-                ts = self.ts
-            except AttributeError:
-                errmsg = ("PBDWriter: no coordinate data to write to "
-                          "trajectory file")
-                raise NoDataError(errmsg) from None
-        self._check_pdb_coordinates()
-        self._write_timestep(ts, **kwargs)
-
-    def _deduce_PDB_atom_name(self, atomname, resname):
-        """Deduce how the atom name should be aligned.
-
-        Atom name format can be deduced from the atom type, yet atom type is
-        not always available. This function uses the atom name and residue name
-        to deduce how the atom name should be formatted. The rules in use got
-        inferred from an analysis of the PDB. See gist at
-        <https://gist.github.com/jbarnoud/37a524330f29b5b7b096> for more
-        details.
-        """
-        if atomname == '':
-            return ''
-        if len(atomname) >= 4:
-            return atomname[:4]
-        elif len(atomname) == 1:
-            return ' {}  '.format(atomname)
-        elif ((resname == atomname
-               or atomname[:2] in self.ions
-               or atomname == 'UNK'
-               or (resname in self.special_hg and atomname[:2] == 'HG')
-               or (resname in self.special_cl and atomname[:2] == 'CL')
-               or Pair(resname, atomname) in self.include_pairs)
-              and Pair(resname, atomname) not in self.exclude_pairs):
-            return '{:<4}'.format(atomname)
-        return ' {:<3}'.format(atomname)
-
-    def _write_timestep(self, ts, multiframe=False):
-        """Write a new timestep *ts* to file
-
-        Does unit conversion if necessary.
-
-        By setting *multiframe* = ``True``, MODEL_ ... ENDMDL_ records are
-        written to represent trajectory frames in a multi-model PDB file. (At
-        the moment we do *not* write the NUMMDL_ record.)
-
-        The *multiframe* = ``False`` keyword signals that the
-        :class:`PDBWriter` is in single frame mode and no MODEL_
-        records are written.
-
-        .. versionchanged:: 0.7.6
-           The *multiframe* keyword was added, which completely determines if
-           MODEL_ records are written. (Previously, this was decided based on
-           the underlying trajectory and only if ``len(traj) > 1`` would
-           MODEL records have been written.)
-
-        .. versionchanged:: 1.0.0
-           ChainID now comes from the last character of segid, as stated in
-           the documentation. An indexing issue meant it previously used the
-           first charater (Issue #2224)
-
-        .. versionchanged:: 2.0.0
-           When only :attr:`record_types` attribute is present, instead of
-           using ATOM_ for both ATOM_ and HETATM_, HETATM_ record
-           types are properly written out (Issue #1753).
-           Writing now only uses the contents of the elements attribute
-           instead of guessing by default. If the elements are missing,
-           empty records are written out (Issue #2423).
-           Atoms are now checked for a valid chainID instead of being
-           overwritten by the last letter of the `segid` (Issue #3144).
-
-        """
-        atoms = self.obj.atoms
-        pos = atoms.positions
-        if self.convert_units:
-            pos = self.convert_pos_to_native(pos, inplace=False)
-
-        if multiframe:
-            self.MODEL(self.frames_written + 1)
-
-        # Make zero assumptions on what information the AtomGroup has!
-        # theoretically we could get passed only indices!
-        def get_attr(attrname, default):
-            """Try and pull info off atoms, else fake it
-
-            attrname - the field to pull of AtomGroup (plural!)
-            default - default value in case attrname not found
-            """
-            try:
-                return getattr(atoms, attrname)
-            except AttributeError:
-                if self.frames_written == 0:
-                    warnings.warn("Found no information for attr: '{}'"
-                                  " Using default value of '{}'"
-                                  "".format(attrname, default))
-                return np.array([default] * len(atoms))
-        altlocs = get_attr('altLocs', ' ')
-        resnames = get_attr('resnames', 'UNK')
-        icodes = get_attr('icodes', ' ')
-        segids = get_attr('segids', ' ')
-        chainids = get_attr('chainIDs', '')
-        resids = get_attr('resids', 1)
-        occupancies = get_attr('occupancies', 1.0)
-        tempfactors = get_attr('tempfactors', 0.0)
-        atomnames = get_attr('names', 'X')
-        elements = get_attr('elements', ' ')
-        record_types = get_attr('record_types', 'ATOM')
-
-        def validate_chainids(chainids, default):
-            """Validate each atom's chainID
-
-            chainids - np array of chainIDs
-            default - default value in case chainID is considered invalid
-            """
-            invalid_length_ids = False
-            invalid_char_ids = False
-            missing_ids = False
-
-            for (i, chainid) in enumerate(chainids):
-                if chainid == "":
-                    missing_ids = True
-                    chainids[i] = default
-                elif len(chainid) > 1:
-                    invalid_length_ids = True
-                    chainids[i] = default
-                elif not chainid.isalnum():
-                    invalid_char_ids = True
-                    chainids[i] = default
-
-            if invalid_length_ids:
-                warnings.warn("Found chainIDs with invalid length."
-                              " Corresponding atoms will use value of '{}'"
-                              "".format(default))
-            if invalid_char_ids:
-                warnings.warn("Found chainIDs using unnaccepted character."
-                              " Corresponding atoms will use value of '{}'"
-                              "".format(default))
-            if missing_ids:
-                warnings.warn("Found missing chainIDs."
-                              " Corresponding atoms will use value of '{}'"
-                              "".format(default))
-            return chainids
-
-        chainids = validate_chainids(chainids, "X")
-
-        # If reindex == False, we use the atom ids for the serial. We do not
-        # want to use a fallback here.
-        if not self._reindex:
-            try:
-                atom_ids = atoms.ids
-            except AttributeError:
-                raise NoDataError(
-                    'The "id" topology attribute is not set. '
-                    'Either set the attribute or use reindex=True.'
-                )
-        else:
-            atom_ids = np.arange(len(atoms)) + 1
-
-        for i, atom in enumerate(atoms):
-            vals = {}
-            vals['serial'] = util.ltruncate_int(atom_ids[i], 5)  # check for overflow here?
-            vals['name'] = self._deduce_PDB_atom_name(atomnames[i], resnames[i])
-            vals['altLoc'] = altlocs[i][:1]
-            vals['resName'] = resnames[i][:4]
-            vals['resSeq'] = util.ltruncate_int(resids[i], 4)
-            vals['iCode'] = icodes[i][:1]
-            vals['pos'] = pos[i]  # don't take off atom so conversion works
-            vals['occupancy'] = occupancies[i]
-            vals['tempFactor'] = tempfactors[i]
-            vals['segID'] = segids[i][:4]
-            vals['chainID'] = chainids[i]
-            vals['element'] = elements[i][:2].upper()
-
-            # record_type attribute, if exists, can be ATOM or HETATM
-            try:
-                self.pdbfile.write(self.fmt[record_types[i]].format(**vals))
-            except KeyError:
-                errmsg = (f"Found {record_types[i]} for the record type, but "
-                          f"only allowed types are ATOM or HETATM")
-                raise ValueError(errmsg) from None
-
-        if multiframe:
-            self.ENDMDL()
-        self.frames_written += 1
-
-    def HEADER(self, trajectory):
-        """Write HEADER_ record.
-
-        .. versionchanged:: 0.20.0
-            Strip `trajectory.header` since it can be modified by the user and should be
-            sanitized (Issue #2324)
-        """
-        if not hasattr(trajectory, 'header'):
-            return
-        header = trajectory.header.strip()
-        self.pdbfile.write(self.fmt['HEADER'].format(header))
-
-    def TITLE(self, *title):
-        """Write TITLE_ record.
-
-        """
-        line = " ".join(title)  # TODO: should do continuation automatically
-        self.pdbfile.write(self.fmt['TITLE'].format(line))
-
-    def REMARK(self, *remarks):
-        """Write generic REMARKS_ record (without number).
-
-        Each string provided in *remarks* is written as a separate REMARKS_
-        record.
-
-        """
-        for remark in remarks:
-            self.pdbfile.write(self.fmt['REMARK'].format(remark))
-
-    def COMPND(self, trajectory):
-        if not hasattr(trajectory, 'compound'):
-            return
-        compound = trajectory.compound
-        for c in compound:
-            self.pdbfile.write(self.fmt['COMPND'].format(c))
-
-    def CRYST1(self, dimensions, spacegroup='P 1', zvalue=1):
-        """Write CRYST1_ record.
-        """
-        self.pdbfile.write(self.fmt['CRYST1'].format(
-            box=dimensions[:3],
-            ang=dimensions[3:],
-            spacegroup=spacegroup,
-            zvalue=zvalue))
-
-    def MODEL(self, modelnumber):
-        """Write the MODEL_ record.
-
-        .. note::
-
-           The maximum MODEL number is limited to 9999 in the PDB
-           standard (i.e., 4 digits). If frame numbers are larger than
-           9999, they will wrap around, i.e., 9998, 9999, 0, 1, 2, ...
-
-        .. versionchanged:: 0.19.0
-           Maximum model number is enforced.
-
-        """
-        self.pdbfile.write(self.fmt['MODEL'].format(int(str(modelnumber)[-4:])))
-
-    def END(self):
-        """Write END_ record.
-
-        Only a single END record is written. Calling END multiple times has no
-        effect. Because :meth:`~PDBWriter.close` also calls this
-        method right before closing the file it is recommended to *not* call
-        :meth:`~PDBWriter.END` explicitly.
-
-        """
-        if not self.has_END:
-            # only write a single END record
-            self.pdbfile.write(self.fmt['END'])
-        self.has_END = True
-
-    def ENDMDL(self):
-        """Write the ENDMDL_ record.
-
-        """
-        self.pdbfile.write(self.fmt['ENDMDL'])
-
-    def CONECT(self, conect):
-        """Write CONECT_ record.
-
-        """
-        conect = ["{0:5d}".format(entry) for entry in conect]
-        conect = "".join(conect)
-        self.pdbfile.write(self.fmt['CONECT'].format(conect))
-
-
-class ExtendedPDBReader(PDBReader):
-    """PDBReader that reads a PDB-formatted file with five-digit residue numbers.
-
-    This reader does not conform to the `PDB 3.3 standard`_ because it allows
-    five-digit residue numbers that may take up columns 23 to 27 (inclusive)
-    instead of being confined to 23-26 (with column 27 being reserved for the
-    insertion code in the PDB standard). PDB files in this format are written
-    by popular programs such as VMD_.
-
-    See Also
-    --------
-    :class:`PDBReader`
-
-
-    .. _VMD: http://www.ks.uiuc.edu/Research/vmd/
-
-    .. versionadded:: 0.8
+class DataPoint(BetterDict):
     """
-    format = "XPDB"
+    Represents an aggregate data poing
 
-
-class MultiPDBWriter(PDBWriter):
-    """PDB writer that implements a subset of the `PDB 3.3 standard`_ .
-
-    PDB format as used by NAMD/CHARMM: 4-letter resnames and segID, altLoc
-    is written.
-
-    By default, :class:`MultiPDBWriter` writes a PDB "movie" (multi frame mode,
-    *multiframe* = ``True``), consisting of multiple models (using the MODEL_
-    and ENDMDL_ records).
-
-
-    .. _MODEL: http://www.wwpdb.org/documentation/file-format-content/format33/sect9.html#MODEL
-    .. _ENDMDL: http://www.wwpdb.org/documentation/file-format-content/format33/sect9.html#ENDMDL
-    .. _CONECT: http://www.wwpdb.org/documentation/file-format-content/format33/sect10.html#CONECT
-
-
-    See Also
-    --------
-    This class is identical to :class:`PDBWriter` with the one
-    exception that it defaults to writing multi-frame PDB files instead of
-    single frames.
-
-
-    .. versionadded:: 0.7.6
-
+    :param ts: timestamp of this point
     """
-    format = ['PDB', 'ENT']
-    multiframe = True  # For Writer registration
-    singleframe = False
+
+    SOURCE_ID = 'id'
+    TIMESTAMP = "ts"
+    CURRENT = "current"
+    CUMULATIVE = "cumulative"
+    SUBRESULTS = "subresults"
+
+    def __init__(self, ts, perc_levels=()):
+        """
+
+        :type ts: int
+        :type perc_levels: list[float]
+        """
+        super(DataPoint, self).__init__()
+        self.perc_levels = perc_levels
+        self[self.SOURCE_ID] = None
+        self[self.TIMESTAMP] = ts
+        self[self.CUMULATIVE] = BetterDict()
+        self[self.CURRENT] = BetterDict()
+        self[self.SUBRESULTS] = []
+
+    def __deepcopy__(self, memo):
+        new = DataPoint(self[self.TIMESTAMP], self.perc_levels)
+        for key in self.keys():
+            new[key] = copy.deepcopy(self[key], memo)
+        return new
+
+    def __merge_kpis(self, src, dst, sid):
+        """
+        :param src: KPISet
+        :param dst: KPISet
+        :param sid: int
+        :return:
+        """
+        for label, val in iteritems(src):
+            dest = dst.get(label, KPISet(self.perc_levels))
+            if not isinstance(val, KPISet):
+                val = KPISet.from_dict(val)
+                val.perc_levels = self.perc_levels
+            dest.merge_kpis(val, sid)
+
+    def recalculate(self):
+        """
+        Recalculate all KPISet's
+        """
+        for val in self[self.CURRENT].values():
+            val.recalculate()
+
+        for val in self[self.CUMULATIVE].values():
+            val.recalculate()
+
+    def merge_point(self, src):
+        """
+
+        :type src: DataPoint
+        """
+        if self[self.TIMESTAMP] != src[self.TIMESTAMP]:
+            msg = "Cannot merge different timestamps (%s and %s)"
+            raise TaurusInternalException(msg % (self[self.TIMESTAMP], src[self.TIMESTAMP]))
+
+        self[DataPoint.SUBRESULTS].append(src)
+
+        self.__merge_kpis(src[self.CURRENT], self[self.CURRENT], src[DataPoint.SOURCE_ID])
+        self.__merge_kpis(src[self.CUMULATIVE], self[self.CUMULATIVE], src[DataPoint.SOURCE_ID])
+
+        self.recalculate()
+
+
+class ResultsProvider(object):
+    """
+    :type listeners: list[AggregatorListener]
+    """
+
+    def __init__(self):
+        super(ResultsProvider, self).__init__()
+        self.cumulative = BetterDict()
+        self.track_percentiles = []
+        self.listeners = []
+        self.buffer_len = 2
+        self.min_buffer_len = 2
+        self.max_buffer_len = float('inf')
+        self.buffer_multiplier = 2
+        self.buffer_scale_idx = None
+
+    def add_listener(self, listener):
+        """
+        Add aggregate results listener
+
+        :type listener: AggregatorListener
+        """
+        self.listeners.append(listener)
+
+    def __merge_to_cumulative(self, current):
+        """
+        Merge current KPISet to cumulative
+        :param current: KPISet
+        """
+        for label, data in iteritems(current):
+            cumul = self.cumulative.get(label, KPISet(self.track_percentiles))
+            cumul.merge_kpis(data)
+            cumul.recalculate()
+
+    def datapoints(self, final_pass=False):
+        """
+        Generator object that returns datapoints from the reader
+
+        :type final_pass: bool
+        """
+        for datapoint in self._calculate_datapoints(final_pass):
+            current = datapoint[DataPoint.CURRENT]
+            self.__merge_to_cumulative(current)
+            datapoint[DataPoint.CUMULATIVE] = copy.deepcopy(self.cumulative)
+            datapoint.recalculate()
+
+            for listener in self.listeners:
+                listener.aggregated_second(datapoint)
+            yield datapoint
+
+    @abstractmethod
+    def _calculate_datapoints(self, final_pass=False):
+        """
+        :rtype : list[DataPoint]
+        """
+        yield
+
+
+class ResultsReader(ResultsProvider):
+    """
+    Aggregator that reads samples one by one,
+    supposed to be attached to every executor
+    """
+    label_generalize_regexps = [
+        (re.compile(r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b"), "U"),
+        (re.compile(r"\b[0-9a-fA-F]{2,}\b"), "U"),
+        # (re.compile(r"\b[0-9a-fA-F]{32}\b"), "U"), # implied by previous, maybe prev is too wide
+        (re.compile(r"\b\d{2,}\b"), "N")
+    ]
+
+    def __init__(self, perc_levels=()):
+        super(ResultsReader, self).__init__()
+        self.generalize_labels = False
+        self.ignored_labels = []
+        self.log = logging.getLogger(self.__class__.__name__)
+        self.buffer = {}
+        self.min_timestamp = 0
+        self.track_percentiles = perc_levels
+
+    def __process_readers(self, final_pass=False):
+        """
+
+        :param final_pass: True if in post-process stage
+        :return:
+        """
+        for result in self._read(final_pass):
+            if result is None:
+                self.log.debug("No data from reader")
+                break
+            elif isinstance(result, list) or isinstance(result, tuple):
+                t_stamp, label, conc, r_time, con_time, latency, r_code, error, trname, byte_count = result
+
+                if label in self.ignored_labels:
+                    continue
+                if t_stamp < self.min_timestamp:
+                    self.log.debug("Putting sample %s into %s", t_stamp, self.min_timestamp)
+                    t_stamp = self.min_timestamp
+
+                if t_stamp not in self.buffer:
+                    self.buffer[t_stamp] = []
+                self.buffer[t_stamp].append((label, conc, r_time, con_time, latency, r_code, error, trname, byte_count))
+            else:
+                raise TaurusInternalException("Unsupported results from %s reader: %s" % (self, result))
+
+    def __aggregate_current(self, datapoint, samples):
+        """
+        :param datapoint: DataPoint
+        :param samples: list of samples
+        :return:
+        """
+        current = datapoint[DataPoint.CURRENT]
+        for sample in samples:
+            label, r_time, concur, con_time, latency, r_code, error, trname, byte_count = sample
+            if label == '':
+                label = '[empty]'
+
+            if self.generalize_labels:
+                label = self.__generalize_label(label)
+
+            if label in current:
+                label = current[label]
+            else:
+                label = current.get(label, KPISet(self.track_percentiles))
+
+            # empty means overall
+            label.add_sample((r_time, concur, con_time, latency, r_code, error, trname, byte_count))
+        overall = KPISet(self.track_percentiles)
+        for label in current.values():
+            overall.merge_kpis(label, datapoint[DataPoint.SOURCE_ID])
+        current[''] = overall
+        return current
+
+    def _calculate_datapoints(self, final_pass=False):
+        """
+        A generator to read available datapoints
+
+        :type final_pass: bool
+        :rtype: DataPoint
+        """
+        self.__process_readers(final_pass)
+
+        self.log.debug("Buffer len: %s", len(self.buffer))
+        if not self.buffer:
+            return
+
+        if self.cumulative and self.track_percentiles:
+            old_len = self.buffer_len
+            chosen_timing = self.cumulative[''][KPISet.PERCENTILES][self.buffer_scale_idx]
+            self.buffer_len = round(chosen_timing * self.buffer_multiplier)
+
+            self.buffer_len = max(self.min_buffer_len, self.buffer_len)
+            self.buffer_len = min(self.max_buffer_len, self.buffer_len)
+            if self.buffer_len != old_len:
+                self.log.info("Changed data analysis delay to %ds", self.buffer_len)
+
+        timestamps = sorted(self.buffer.keys())
+        while final_pass or (timestamps[-1] >= (timestamps[0] + self.buffer_len)):
+            timestamp = timestamps.pop(0)
+            self.min_timestamp = timestamp + 1
+            self.log.debug("Aggregating: %s", timestamp)
+            samples = self.buffer.pop(timestamp)
+            datapoint = self.__get_new_datapoint(timestamp)
+            self.__aggregate_current(datapoint, samples)
+            yield datapoint
+
+            if not timestamps:
+                break
+
+    def __get_new_datapoint(self, timestamp):
+        """
+        :rtype: DataPoint
+        """
+        point = DataPoint(timestamp, self.track_percentiles)
+        point[DataPoint.SOURCE_ID] = id(self)
+        return point
+
+    @abstractmethod
+    def _read(self, final_pass=False):
+        """
+
+        :param final_pass: True if called from post-process stage, when reader
+            should report possible rests of results
+        :rtype: list
+        :return: timestamp, label, concurrency, rt, latency, rc, error
+        """
+        yield
+
+    def __generalize_label(self, label):
+        for regexp, replacement in self.label_generalize_regexps:
+            label = regexp.sub(replacement, label)
+
+        return label
+
+
+class ConsolidatingAggregator(Aggregator, ResultsProvider):
+    """
+
+    :type underlings: list[bzt.modules.aggregator.ResultsProvider]
+    """
+
+    # TODO: switch to underling-count-based completeness criteria
+    def __init__(self):
+        Aggregator.__init__(self, is_functional=False)
+        ResultsProvider.__init__(self)
+        self.generalize_labels = False
+        self.ignored_labels = []
+        self.underlings = []
+        self.buffer = BetterDict()
+
+    def prepare(self):
+        """
+        Read aggregation options
+        """
+        super(ConsolidatingAggregator, self).prepare()
+
+        # make unique & sort
+        percentiles = self.settings.get("percentiles", self.track_percentiles)
+        percentiles = list(set(percentiles))
+        percentiles.sort()
+        self.track_percentiles = percentiles
+        self.settings['percentiles'] = percentiles
+
+        self.ignored_labels = self.settings.get("ignore-labels", self.ignored_labels)
+        self.generalize_labels = self.settings.get("generalize-labels", self.generalize_labels)
+
+        self.min_buffer_len = dehumanize_time(self.settings.get("min-buffer-len", self.min_buffer_len))
+
+        max_buffer_len = self.settings.get("max-buffer-len", self.max_buffer_len)
+        try:  # for max_buffer_len == float('inf')
+            self.max_buffer_len = dehumanize_time(max_buffer_len)
+        except TaurusInternalException as exc:
+            self.log.debug("Exception in dehumanize_time(%s)" % max_buffer_len)
+            if str(exc).find('inf') != -1:
+                self.max_buffer_len = max_buffer_len
+            else:
+                raise TaurusConfigError("Wrong 'max-buffer-len' value: %s" % max_buffer_len)
+
+        self.buffer_multiplier = self.settings.get("buffer-multiplier", self.buffer_multiplier)
+
+        percentile = self.settings.get("buffer-scale-choice", 0.5)
+        count = len(self.track_percentiles)
+        if count == 1:
+            self.buffer_scale_idx = str(float(self.track_percentiles[0]))
+        if count > 1:
+            percentiles = [i / (count - 1.0) for i in range(count)]
+            distances = [abs(percentile - percentiles[i]) for i in range(count)]
+            index_position = distances.index(min(distances))
+            self.buffer_scale_idx = str(float(self.track_percentiles[index_position]))
+
+        debug_str = 'Buffer scaling setup: percentile %s from %s selected'
+        self.log.debug(debug_str, self.buffer_scale_idx, self.track_percentiles)
+
+    def add_underling(self, underling):
+        """
+        Add source for aggregating
+
+        :type underling: ResultsProvider
+        """
+        underling.track_percentiles = self.track_percentiles
+        if isinstance(underling, ResultsReader):
+            underling.ignored_labels = self.ignored_labels
+            underling.generalize_labels = self.generalize_labels
+            underling.min_buffer_len = self.min_buffer_len
+            underling.max_buffer_len = self.max_buffer_len
+            underling.buffer_multiplier = self.buffer_multiplier
+            underling.buffer_scale_idx = self.buffer_scale_idx
+
+        self.underlings.append(underling)
+
+    def check(self):
+        """
+        Check if there is next aggregate data present
+
+        :rtype: bool
+        """
+        for point in self.datapoints():
+            self.log.debug("Processed datapoint: %s/%s", point[DataPoint.TIMESTAMP], point[DataPoint.SOURCE_ID])
+        return super(ConsolidatingAggregator, self).check()
+
+    def post_process(self):
+        """
+        Process all remaining aggregate data
+        """
+        super(ConsolidatingAggregator, self).post_process()
+        for point in self.datapoints(True):
+            self.log.debug("Processed datapoint: %s/%s", point[DataPoint.TIMESTAMP], point[DataPoint.SOURCE_ID])
+
+    def _process_underlings(self, final_pass):
+        for underling in self.underlings:
+            for data in underling.datapoints(final_pass):
+                tstamp = data[DataPoint.TIMESTAMP]
+                if self.buffer:
+                    mints = min(self.buffer.keys())
+                    if tstamp < mints:
+                        self.log.debug("Putting datapoint %s into %s", tstamp, mints)
+                        data[DataPoint.TIMESTAMP] = mints
+                        tstamp = mints
+                self.buffer.get(tstamp, []).append(data)
+
+    def _calculate_datapoints(self, final_pass=False):
+        """
+        Override ResultsProvider._calculate_datapoints
+
+        """
+        self._process_underlings(final_pass)
+
+        self.log.debug("Consolidator buffer[%s]: %s", len(self.buffer), self.buffer.keys())
+        if not self.buffer:
+            return
+
+        timestamps = sorted(self.buffer.keys())
+        while timestamps and (final_pass or (timestamps[-1] >= timestamps[0] + self.buffer_len)):
+            tstamp = timestamps.pop(0)
+            self.log.debug("Merging into %s", tstamp)
+            points_to_consolidate = self.buffer.pop(tstamp)
+            point = DataPoint(tstamp, self.track_percentiles)
+            for subresult in points_to_consolidate:
+                self.log.debug("Merging %s", subresult[DataPoint.TIMESTAMP])
+                point.merge_point(subresult)
+            point.recalculate()
+            yield point
+
+
+class NoneAggregator(Aggregator, ResultsProvider):
+    """
+    Dummy aggregator
+    """
+
+    def __init__(self):
+        Aggregator.__init__(self, is_functional=False)
+        ResultsProvider.__init__(self)
+
+    def _calculate_datapoints(self, final_pass=False):
+        pass
+
+
+class AggregatorListener(object):
+    """
+    Mixin for listeners of aggregator data
+    """
+
+    @abstractmethod
+    def aggregated_second(self, data):
+        """
+        Notification about new data point
+
+        :param data: bzt.modules.reporting.DataPoint
+        """
+        pass
+
+    def finalize(self):
+        """
+        This method is called at the end of run
+        to close open file descriptors etc.
+        """
+        pass
