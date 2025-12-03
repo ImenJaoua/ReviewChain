@@ -32922,5 +32922,21 @@
   {
     "role": "Developer",
     "message": "@@ -903,10 +903,7 @@ class PDBWriter(Writer):\n             The :class:`~MDAnalysis.core.groups.AtomGroup` or\n             :class:`~MDAnalysis.core.universe.Universe` to write.\n         \"\"\"\n-        \n-        self._update_frame(obj)\n-        self._write_pdb_header()\n-        # Issue 105: with write() ONLY write a single frame; use\n+        self._update_frame(obj)\n+        self._write_pdb(self.atomgroup, self.atomgroup.segments)\n         return\n \n     def _write_pdb(self, atoms, segments):"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider removing the line `self._compact_times()` as it appears to be unnecessary in this context. The `_compact_times` method appears to handle the aggregation of non-empty timers, which seems to be the case here."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -170,5 +170,6 @@ class TimerAggregator(object):\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n-            self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n+            self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n+\n             self._compact_times()\n \n         else:"
+  },
+  {
+    "role": "Reviewer",
+    "message": "The `_compact_times` method is unnecessary in the current implementation. Consider removing it to simplify the code."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -167,7 +167,7 @@ class PingResult(dict):\n \n         :return:\n         \"\"\"\n-        if self[self.SAMPLE_COUNT]:\n+        if self[self.SAMPLE_COUNT] > 0:\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n         else:"
   }
 ]

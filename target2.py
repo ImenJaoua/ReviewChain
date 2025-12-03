@@ -167,8 +167,6 @@ class KPISet(BetterDict):
 
         :return:
         """
-        self._compact_times()
-
         if self[self.SAMPLE_COUNT]:
             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]
             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]
