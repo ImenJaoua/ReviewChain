@@ -8,8 +8,8 @@ from datasets import Dataset
 from chat_env import ChatEnv, ChatEnvConfig
 from one_round import ReviewPhase   # your new single-round ReviewPhase
 
-SELECTED_FILE = "selected_50.jsonl"
-OUTPUT_REFINEMENT = "results/refinement_results_reviewchain_one_round.jsonl"
+SELECTED_FILE = "selected_200.jsonl"
+OUTPUT_REFINEMENT = "results/refinement_results_reviewchain_200.jsonl"
 
 print(f"📂 Loading selected examples from {SELECTED_FILE}")
 examples = []

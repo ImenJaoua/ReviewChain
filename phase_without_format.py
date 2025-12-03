@@ -103,6 +103,7 @@ class ReviewPhase:
                     print(f"\n⚠️ QUALITY CHECK LIMIT REACHED — forcing acceptance")
                     qe_decision = 0
                 else:
+                    #current_code= proposed_code  # keep last proposed code for next round
                     print("\n❌ QE REJECTED — looping back to A1")
 
                     previous_feedback = {

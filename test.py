@@ -5,10 +5,10 @@ from datasets import Dataset
 
 # ---- import your ReviewChain modules ----
 from chat_env import ChatEnv, ChatEnvConfig
-from one_round import ReviewPhase
+from phase import ReviewPhase
 
-SELECTED_FILE = "selected_50.jsonl"
-OUTPUT_REFINEMENT = "results/refinement_results_reviewchain_one_round.jsonl"
+SELECTED_FILE = "selected_200.jsonl"
+OUTPUT_REFINEMENT = "results/refinement_results_reviewchain12.jsonl"
 
 print(f"📂 Loading selected examples from {SELECTED_FILE}")
 examples = []

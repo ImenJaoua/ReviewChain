@@ -1,94 +1,55 @@
+# one_round_backend.py
 import json
+import requests
 from chat_env import ChatEnv
-from agents_local import (
-    comment_generator,
-    code_refiner,
-    quality_estimator
-)
 
+BACKEND = "http://localhost:8000"
 
 class ReviewPhase:
-    """
-    ONE-SHOT REVIEW PIPELINE
-
-    PHASE 1: A1 → comment generation
-    PHASE 2: A2 → refinement
-    PHASE 3: A3 → quality estimation
-
-    No retries, no loops, no feedback in a second round.
-    """
-
     def __init__(self, chat_env: ChatEnv):
         self.chat_env = chat_env
 
+    # ---------- Backend wrappers ----------
+    def a1_comment(self, code):
+        res = requests.post(f"{BACKEND}/generate_comment", json={"code": code})
+        return res.json()["response"]
 
+    def a2_refine(self, code, comment):
+        res = requests.post(f"{BACKEND}/refine",
+                            json={"code": code, "comment": comment})
+        return res.json()["response"]
+
+    def a3_quality(self, code):
+        res = requests.post(f"{BACKEND}/quality", json={"code": code})
+        return res.json()["response"]
+
+    # ---------- One-round pipeline ----------
     def execute(self):
-        # ----------------------------------------------
-        # Load the initial code
-        # ----------------------------------------------
-        current_code = self.chat_env.get("code")
-        print("\nInitial Code:\n", current_code)
+        code = self.chat_env.get("code")
 
-        # ----------------------------------------------
-        # PHASE 1: Comment Generation (A1)
-        # ----------------------------------------------
-        print("\n--- Phase 1: Comment Generation (A1) ---")
+        # A1 COMMENT
+        print("\n--- A1: Comment Generation ---")
+        comment = self.a1_comment(code)
+        print("A1 Comment:", comment)
 
-        comment = comment_generator(
-            code_diff=current_code,
-            feedback=None        # single round → no previous feedback
-        )
+        # A2 REFINEMENT
+        print("\n--- A2: Refinement ---")
+        refined = self.a2_refine(code, comment)
+        print("A2 Refined Code:", refined)
 
-        print("\n💬 A1 Comment:")
-        print(comment)
+        # A3 QUALITY
+        print("\n--- A3: Quality Estimation ---")
+        qe_output = self.a3_quality(refined)
+        print("A3 Output:", qe_output)
 
-        self.chat_env.append_history("Reviewer", comment)
-        self.chat_env.update("comments", comment)
-
-        # ----------------------------------------------
-        # PHASE 2: Code Refinement (A2)
-        # ----------------------------------------------
-        print("\n--- Phase 2: Refinement (A2) ---")
-
-        refined_code = code_refiner(current_code, comment)
-
-        print("\n🛠 A2 Refined Code:")
-        print(refined_code)
-
-        self.chat_env.append_history("Developer", refined_code)
-
-        # ----------------------------------------------
-        # PHASE 3: Quality Estimation (A3)
-        # ----------------------------------------------
-        print("\n--- Phase 3: Quality Estimation (A3) ---")
-
-        qe_output = quality_estimator(refined_code)
-        print("\n🧠 A3 Response:")
-        print(qe_output)
-
-        # Best-effort parse
+        # Try to parse decision
         try:
             q = json.loads(qe_output)
-            qe_decision = int(q.get("decision", 0))
-            qe_feedback = q.get("justification", "")
+            decision = int(q.get("decision", 0))
         except:
-            qe_decision = 0 if "accept" in qe_output.lower() else 1
-            qe_feedback = qe_output
+            decision = 0 if "accept" in qe_output.lower() else 1
 
-        # ----------------------------------------------
-        # Final result
-        # ----------------------------------------------
-        if qe_decision == 0:
-            print("\n🎉 QUALITY ACCEPTED!")
-        else:
-            print("\n❌ QUALITY REJECTED!")
-            print("Reason:", qe_feedback)
+        if decision == 1:
+            print("⚠️ Quality rejected — but single round → keeping refined code")
 
-        # Save final result (even if rejected)
-        self.chat_env.update_code(refined_code)
-        self.chat_env.append_history("QualityEstimator", "ACCEPTED" if qe_decision == 0 else "REJECTED")
-
-        print("\n=== FINAL SUMMARY ===")
-        print("Final code:\n", refined_code)
-
-        return refined_code
+        return refined.strip()
