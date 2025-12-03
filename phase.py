@@ -41,6 +41,7 @@ class ReviewPhase:
     # -----------------------------
     def execute(self):
         current_code = self.chat_env.get("code")
+        print(current_code)
         previous_feedback = None
 
         format_attempt_count = 0
