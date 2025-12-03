@@ -2229,7 +2229,7 @@ class ApiClientImpl(ApiClient):
                                    'this API client')
 
     def iter_kubernetes_nodes(self, project_id, zone, cluster):
-        """Iterate k8s nodes in an organization from GCP API.
+        """Iterate k8s nodes in a cluster from GCP API.
          Args:
             project_id (str): id of the project to query.
             zone (str): The zone the cluster is in.

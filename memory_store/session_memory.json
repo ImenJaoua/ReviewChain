@@ -32674,5 +32674,93 @@
   {
     "role": "Developer",
     "message": "@@ -110,7 +110,7 @@\n \t\t\t\t\tbreak outer;\n \t\t\t\t}\n \n-\t\t\t\tif (newType._id==='_P' && c.props.value!==newVNode.props.value) {\n+\t\t\t\tif (c.type._id==='_P' && c.props.value!==newVNode.props.value) {\n \t\t\t\t\tconst v = newVNode.props.value;\n \t\t\t\t\tnewVNode._component.subs.map(sub => v!==sub.context && (sub.context = v, enqueueRender(sub)));\n \t\t\t\t}"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider rephrasing the docstring for `iter_kubernetes_nodes` to accurately reflect the change from \"an organization\" to \"a cluster\". Specifically, specify that the nodes are being retrieved from the specified cluster in the specified project and zone."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -2229,9 +2229,9 @@ class GCPClient(object):\n                                    'this API client')\n \n     def iter_kubernetes_nodes(self, project_id, zone, cluster):\n-        \"\"\"Iterate k8s nodes in a cluster from GCP API.\n+        \"\"\"Iterate k8s nodes in a cluster for a project.\n          Args:\n-             project_id (str): id of the project to query.\n+             project_id (str): id of the project to query.\n              zone (str): The zone the cluster is in.\n              cluster (str): The cluster to list nodes from.\n          Returns:"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider rephrasing the docstring to better reflect the intended functionality, specifically 'Iterate k8s nodes in a specific cluster from GCP API.' This change would improve the clarity of the method's purpose."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -2229,8 +2229,8 @@ class GcpApiClient(object):\n                                    'this API client')\n \n     def iter_kubernetes_nodes(self, project_id, zone, cluster):\n-        \"\"\"Iterate k8s nodes in a cluster from GCP API.\n-        Args:\n+        \"\"\"Iterate k8s nodes in a specific cluster from GCP API.\n+        Args:\n             project_id (str): id of the project to query.\n             zone (str): The zone the cluster is in.\n             cluster (str): The cluster to query."
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider using the term \"cluster\" consistently throughout the function docstring instead of \"organization\" for clarity and consistency."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -2229,10 +2229,10 @@ class BQHelper(object):\n                                    'this API client')\n \n     def iter_kubernetes_nodes(self, project_id, zone, cluster):\n-        \"\"\"Iterate k8s nodes in a cluster from GCP API.\n+        \"\"\"Iterate k8s nodes in a cluster.\n          Args:\n             project_id (str): id of the project to query.\n             zone (str): The zone the cluster is in.\n-            cluster (str): The cluster to get nodes from.\n+            cluster (str): The cluster to get nodes from.\n          Yields:\n             dict: nodes from GKE\n          \"\"\""
+  },
+  {
+    "role": "Reviewer",
+    "message": "The function `iter_kubernetes_nodes` should be updated to iterate over nodes in the specified cluster instead of the entire organization from GCP API."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -2230,8 +2230,7 @@ class GcpClient(object):\n \n     def iter_kubernetes_nodes(self, project_id, zone, cluster):\n         \"\"\"Iterate k8s nodes in a cluster from GCP API.\n-        Args:\n-            project_id (str): id of the project to query.\n+        Args:\n             project_id (str): id of the project to query.\n             zone (str): The zone the cluster is in.\n             cluster (str): The name of the cluster."
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a clarification in the docstring for the `iter_kubernetes_nodes` method to indicate that it retrieves nodes from a specific cluster instead of an organization."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -2225,13 +2225,13 @@ class Gcp(object):\n             :param: `project_id`: ID of the project to query.\n             :param: `zone`: The zone the cluster is in.\n             :param: `cluster`: The id of the cluster.\n-            :returns: Iterator over all K8s nodes for the given organization.\n+            :returns: Iterator over all K8s nodes for the given cluster.\n         \"\"\"\n \n         url = 'https://container.googleapis.com/v1/projects/{}/locations/{}/clusters/{}/nodes'.format(\n             project_id,\n             zone,\n-            organization)\n+            cluster)\n \n         return self._iterate(url, 'nodes', 'items')"
+  },
+  {
+    "role": "Reviewer",
+    "message": "The comment for `iter_kubernetes_nodes` seems to be incorrect. It's currently stating that the nodes are being iterated in an organization from the GCP API, but the method's purpose and arguments clearly indicate that it's querying a cluster in a specific project and zone. Consider rephrasing the comment to accurately reflect the method's purpose and arguments."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -2229,12 +2229,13 @@ class CloudProjectsClient(object):\n                                    'this API client')\n \n     def iter_kubernetes_nodes(self, project_id, zone, cluster):\n-        \"\"\"Iterate k8s nodes in a cluster from GCP API.\n+        \"\"\"Iterate k8s nodes in an organization from GCP API.\n          Args:\n             project_id (str): id of the project to query.\n             zone (str): The zone the cluster is in.\n             cluster (str): The name of the cluster to get nodes from.\n+        \"\"\"\n         node_list = self.list_kubernetes_nodes(\n             project_id, zone, cluster)\n         return iter(node_list)"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a space after the comma in the function docstring to improve readability."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -2234,7 +2234,7 @@ class ComputeEngineClient(gcp_client.GcpClient):\n          Args:\n             project_id (str): id of the project to query.\n             zone (str): The zone the cluster is in.\n-            cluster (str): The cluster to list nodes in.\n+            cluster (str): The cluster to list nodes in.\n \n          Yields:\n             ndb.models.Node: A Node instance."
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a clarification in the docstring to explicitly state that the `project_id` and `zone` parameters are for the GCP project and zone, respectively, where the cluster is located. Additionally, note that the `zone` parameter can be `None`, as some clusters may not require specific zones."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -2232,7 +2232,7 @@ class GoogleCloud(object):\n         \"\"\"Iterate k8s nodes in a cluster from GCP API.\n          Args:\n             project_id (str): id of the project to query.\n-            zone (str): The zone the cluster is in.\n+            zone (str): The zone the cluster is in, or None for regional clusters.\n             cluster (str): name of the cluster to query.\n             client (googleapiclient.discovery.Resource): A client for GCP API\n                 discovery."
+  },
+  {
+    "role": "Reviewer",
+    "message": "The docstring for the `iter_kubernetes_nodes` method seems incorrect. It states that the nodes are being iterated in an organization, but the method's arguments suggest they're being iterated in a cluster. Consider updating the docstring to reflect the correct behavior."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -2229,7 +2229,7 @@ class GKEAdminClient(client.Client):\n                                    'this API client')\n \n     def iter_kubernetes_nodes(self, project_id, zone, cluster):\n-        \"\"\"Iterate k8s nodes in a cluster from GCP API.\n+        \"\"\"Iterate k8s nodes in a project from GCP API.\n          Args:\n             project_id (str): id of the project to query.\n             zone (str): The zone the cluster is in."
+  },
+  {
+    "role": "Reviewer",
+    "message": "The docstring for the `iter_kubernetes_nodes` method appears outdated. Consider updating it to reflect the correct description of the method's functionality, which is to iterate over k8s nodes in a cluster from the GCP API."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -2229,10 +2229,10 @@ class GKEClient:\n                                    'this API client')\n \n     def iter_kubernetes_nodes(self, project_id, zone, cluster):\n-        \"\"\"Iterate k8s nodes in a cluster from GCP API.\n-          Args:\n-             project_id (str): id of the project to query.\n-             zone (str): The zone the cluster is in.\n-             cluster (str): The cluster id.\n+        \"\"\"Iterate over k8s nodes in a cluster from the GCP API.\n+        Args:\n+            project_id (str): id of the project to query.\n+            zone (str): The zone the cluster is in.\n+            cluster (str): The cluster id.\n         Yields:\n             Tuple of (str, Dict): Node name and node info.\n         \"\"\""
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider renaming `zone` to `location` for consistency and clarity."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -2232,7 +2232,7 @@ class Client(gcp_base.Client):\n         \"\"\"Iterate k8s nodes in a cluster from GCP API.\n          Args:\n             project_id (str): id of the project to query.\n-            zone (str): The zone the cluster is in.\n+            location (str): The location the cluster is in.\n             cluster (str): Name of the cluster to query.\n \n         Returns:"
   }
 ]
