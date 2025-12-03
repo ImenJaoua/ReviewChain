@@ -51,8 +51,8 @@ def naive_dice_loss(pred,
                     eps=1e-3,
                     reduction='mean',
                     avg_factor=None):
-    """Calculate naive dice loss, the coefficient in the denominator is the
-    first power instead of the second power.
+    """Calculate dice loss, the coefficient in the denominator is the first
+    power instead of the second power.
 
     Args:
         pred (torch.Tensor): The prediction, has a shape (n, *)
