@@ -32550,5 +32550,45 @@
   {
     "role": "Developer",
     "message": "@@ -274,7 +274,6 @@ class SchedulerHandler(BaseHandler):\n         self.redirect(\"/static/visualiser/index.html\")\n \n     def head(self):\n-        \"\"\"HEAD endpoint for health checking the scheduler\"\"\"\n         self.set_status(204)\n         self.finish()"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a check for the `type` parameter in the `_get_user` method to ensure it's properly utilized and handling cases where it's not present."
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a space after `STYLESHEET` for consistency and to improve readability."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -49,8 +49,8 @@ class DebugConsole(QPlainTextEdit, LogReceiver):\n     execute = pyqtSignal(str)\n     STYLESHEET = \"\"\"\n         ConsoleLineEdit {\n-            font: {{ conf.fonts.debug_console }};\n-        }\n+            font: {{ conf.fonts.debug_console }};\n+        }\n     \"\"\"\n \n     def __init__(self, _namespace, parent):"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider removing the underscore prefix from the `_namespace` parameter in the `__init__` method, as it seems unnecessary."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -52,7 +52,7 @@ class ConsoleLineEdit(QWidget, LineEdit):\n         ConsoleLineEdit {\n             font: {{ conf.fonts.debug_console }};\n         }\n-    \"\"\"\n+    \"\"\"\n \n     def __init__(self, _namespace, parent):\n         super(ConsoleLineEdit, self).__init__(parent)"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a space after the opening bracket `(` in the line `STYLESHEET = \"\"\"` for consistency and readability."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -47,11 +47,11 @@ class DebugConsole(QtWidgets.QWidget):\n     \"\"\"\n \n     execute = pyqtSignal(str)\n-    STYLESHEET = \"\"\"\n-        ConsoleLineEdit {\n-            font: {{ conf.fonts.debug_console }};\n-        }\n-    \"\"\"\n+    STYLESHEET = \"\"\"\\\n+        ConsoleLineEdit {\n+            font: {{conf.fonts.debug_console}};\n+        }\n     \"\"\"\n \n     def __init__(self, _namespace, parent):\n         super().__init__(parent)"
+  },
+  {
+    "role": "Reviewer",
+    "message": "The added styling for the `ConsoleLineEdit` class in the `__init__` method seems unnecessary. Could you provide a justification for including this styling, or consider removing it if it's not being used?"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider reformatting the code to follow the PEP8 style guide for better readability and consistency. Specifically, line 47 and 100 should be 6 spaces to the right of column 80, as suggested by PEP8."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -47,11 +47,6 @@ class ConsoleLineEdit(QLineEdit):\n     \"\"\"\n \n     execute = pyqtSignal(str)\n-    STYLESHEET = \"\"\"\n-        ConsoleLineEdit {\n-            font: {{ conf.fonts.debug_console }};\n-        }\n-    \"\"\"\n+    STYLESHEET = \"\"\"ConsoleLineEdit {font: {{ conf.fonts.debug_console }};}\"\"\"\n \n \n     def __init__(self, _namespace, parent):"
   }
 ]
