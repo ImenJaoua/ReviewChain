@@ -203,6 +203,8 @@ def hunke_generator(old_file, updated_file):
 def apply_unified_diff(original_content, diff_text):
     """
     Apply a unified diff patch to the original content.
+    If no correlation exists between original_content and diff_text,
+    just replace the original_content with diff_text.
     """
     original_lines = original_content.splitlines(keepends=True)
     
@@ -211,6 +213,13 @@ def apply_unified_diff(original_content, diff_text):
     
     # Find the hunk header (@@)
     hunk_pattern = r'^@@ -(\d+),(\d+) \+(\d+),(\d+) @@'
+    
+    # Check if diff_text contains any hunk headers (valid unified diff)
+    has_hunks = any(re.match(hunk_pattern, line) for line in diff_lines)
+    
+    # If no hunks found, there's no correlation - just replace content
+    if not has_hunks:
+        return diff_text if diff_text.endswith('\n') or not diff_text else diff_text + '\n'
     
     result_lines = original_lines.copy()
     offset = 0  # Track line number offset as we make changes
@@ -229,6 +238,11 @@ def apply_unified_diff(original_content, diff_text):
             
             # Adjust for 0-based indexing
             old_start_idx = old_start - 1 + offset
+            
+            # Check if the hunk references are out of bounds (no correlation)
+            if old_start_idx < 0 or old_start_idx >= len(result_lines):
+                # No valid correlation, replace entire content
+                return diff_text if diff_text.endswith('\n') or not diff_text else diff_text + '\n'
             
             # Collect the new lines from this hunk
             new_lines = []
