@@ -32938,5 +32938,13 @@
   {
     "role": "Developer",
     "message": "@@ -167,7 +167,7 @@ class PingResult(dict):\n \n         :return:\n         \"\"\"\n-        if self[self.SAMPLE_COUNT]:\n+        if self[self.SAMPLE_COUNT] > 0:\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n         else:"
+  },
+  {
+    "role": "Reviewer",
+    "message": "The addition of `schedulerTaskLauncher` appears to be a new configuration property. However, the `@NotBlank` annotation is missing for this new property. Could you please add the annotation or clarify the purpose of this new configuration?"
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -42,6 +42,7 @@ public class ComposedTaskRunnerProperties implements TaskRunnerProperties {\n \tprivate String composedTaskRunnerName = \"composed-task-runner\";\n \n \t@NotBlank\n+\t@Valid\n \tprivate String schedulerTaskLauncher = \"scheduler-task-launcher\";\n \n \tpublic String getComposedTaskRunnerName() {"
   }
 ]

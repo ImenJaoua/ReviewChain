@@ -1,30 +1,10 @@
 [
   {
     "role": "Reviewer",
-    "message": "Consider adding validation for the `schedulerTaskLauncher` field to ensure it's not blank, as it's currently set as a blank string. If this field is intended to be configurable, consider making it a configuration property rather than a constant."
+    "message": "The addition of `schedulerTaskLauncher` appears to be a new configuration property. However, the `@NotBlank` annotation is missing for this new property. Could you please add the annotation or clarify the purpose of this new configuration?"
   },
   {
     "role": "Developer",
-    "message": "@@ -41,7 +41,7 @@ public class ComposedTaskProperties {\n \t@NotBlank\n \tprivate String composedTaskRunnerName = \"composed-task-runner\";\n \n-\t@NotBlank\n+\t@NotBlank(message = \"schedulerTaskLauncher should not be null or blank.\")\n \tprivate String schedulerTaskLauncher = \"scheduler-task-launcher\";\n \n \t/**"
-  },
-  {
-    "role": "Reviewer",
-    "message": "Consider adding a validation for the `schedulerTaskLauncher` property to ensure it's not empty. Additionally, note that the `composed-task-runner` is used by default, so it might be beneficial to remove the `schedulerTaskLauncher` property and instead rely on the `composedTaskRunnerName` for launch configuration."
-  },
-  {
-    "role": "Reviewer",
-    "message": "Consider adding a brief explanation for the new `schedulerTaskLauncher` property to provide context for its purpose and usage."
-  },
-  {
-    "role": "Developer",
-    "message": "@@ -59,7 +59,11 @@ public class ComposedTaskProperties {\n \t * Composed task runner implementation.\n \t */\n \t@NotBlank\n-\tprivate String composedTaskRunner = \"composed-task-runner\";\n+\tprivate String composedTaskRunner = \"composed-task-runner-impl\";\n+\n+\t/**\n+\t * Composed task runner implementation.\n+\t */\n \t@NotBlank\n \tprivate String composedTaskRunnerName = \"composed-task-runner\";"
-  },
-  {
-    "role": "Reviewer",
-    "message": "Consider using a more descriptive name for the `schedulerTaskLauncher` property, as the current name doesn't clearly indicate its purpose. For example, `composedTaskSchedulerTaskLauncher` could be a more accurate name."
-  },
-  {
-    "role": "Developer",
-    "message": "@@ -43,13 +43,13 @@ public class ComposedTaskProperties {\n \n \t@NotBlank\n \tprivate String schedulerTaskLauncher = \"scheduler-task-launcher\";\n+\n \tprivate String taskLauncher = \"scheduler-task-launcher\";\n \n \tprivate Map<String, TaskSchedulerProperties> taskSchedulers = new HashMap<>();\n \n \tprivate Map<String, TaskLauncherProperties> taskLaunchers = new HashMap<>();\n \n-\tprivate Map<String, ComposedTaskRunnerProperties> taskRunners = new HashMap<>();\n+\tprivate Map<String, ComposedTaskRunnerProperties> taskRunners = new HashMap<>();\n \n \tpublic String getComposedTaskRunnerName() {\n \t\treturn composedTaskRunnerName;"
+    "message": "@@ -42,6 +42,7 @@ public class ComposedTaskRunnerProperties implements TaskRunnerProperties {\n \tprivate String composedTaskRunnerName = \"composed-task-runner\";\n \n \t@NotBlank\n+\t@Valid\n \tprivate String schedulerTaskLauncher = \"scheduler-task-launcher\";\n \n \tpublic String getComposedTaskRunnerName() {"
   }
 ]
