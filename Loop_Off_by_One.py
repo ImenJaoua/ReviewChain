@@ -1,6 +1,6 @@
 def clean_records(data):
     cleaned = []
-    for i in range(len(data)):   # ← full range
+    for i in range(len(data)):  
         record = data[i]
         if "name" in record and record["name"]:
             record["name"] = record["name"].strip()
