@@ -32946,5 +32946,13 @@
   {
     "role": "Developer",
     "message": "@@ -42,6 +42,7 @@ public class ComposedTaskRunnerProperties implements TaskRunnerProperties {\n \tprivate String composedTaskRunnerName = \"composed-task-runner\";\n \n \t@NotBlank\n+\t@Valid\n \tprivate String schedulerTaskLauncher = \"scheduler-task-launcher\";\n \n \tpublic String getComposedTaskRunnerName() {"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider encapsulating the `if` and `else` conditions into separate lines for improved readability and adherence to coding standards. Additionally, ensure that the `else` block is always present when using the `or` operator."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -5,10 +5,15 @@ from django.db.models import Q\n from django.db.models import Case, When, IntegerField, BooleanField, CharField\n from django.utils.functional import cached_property\n from django.utils.translation import gettext_lazy as _\n+from django.core.exceptions import ValidationError\n+from django.core.validators import MaxLengthValidator\n \n from xmodule.modulestore import CourseDescriptor\n from xmodule.modulestore.django import modulestore\n from xmodule.modulestore.exceptions import ItemNotFoundError\n from xmodule.modulestore.django import modulestore\n+\n+\n class CourseOverview(models.Model):\n     \"\"\"\n     This model represents a course overview in the database. It is a simple model that is used to store the course data that is needed to display the course in the courseware, but does not contain any information about the individual modules or units within the course. The course overview contains only the general information about the course and the sequence of the modules and units."
   }
 ]
