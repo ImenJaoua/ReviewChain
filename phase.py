@@ -41,6 +41,7 @@ class ReviewPhase:
     # -----------------------------
     def execute(self):
         current_code = self.chat_env.get("code")
+        print("=== INITIAL CODE ===")
         print(current_code)
         previous_feedback = None
 
@@ -51,31 +52,20 @@ class ReviewPhase:
 
             print(f"\n================ ROUND {round_id + 1} ================")
 
-            # =====================================================
-            # PHASE 1 — A1: Comment Generator
-            # =====================================================
-            print("\n--- Phase 1: Comment Generation (A1) ---")
-
+            # -------------- A1 --------------
             comment = self.a1_comment(current_code, previous_feedback)
-
-            print("\n💬 A1 Comment:")
-            print(comment)
-
             self.chat_env.append_history("Reviewer", comment)
+            print("\n--- Reviewer Comments ---")
+            print(comment)
             self.chat_env.update("comments", comment)
 
-            # =====================================================
-            # A4: Format Judge
-            # =====================================================
-            print("\n--- Phase 1.5: Format Check (A4) ---")
-
+            # -------------- A4 Format Judge --------------
             format_attempt_count += 1
             format_output = self.a4_format_judge(comment)
-
-            print("\n📋 A4 Format Judge Response:")
+            print("\n--- Format Judgment ---")
             print(format_output)
 
-            # Fix missing JSON quotes
+            # parse decision
             raw = re.sub(
                 r'"decision"\s*:\s*([A-Z]+)',
                 r'"decision": "\1"',
@@ -92,15 +82,11 @@ class ReviewPhase:
 
             fj_accept = (fj_decision_raw == "ACCEPT")
 
-            print("\nParsed Format Judge Decision:", fj_decision_raw)
-
-            # If rejected
             if not fj_accept:
                 if format_attempt_count >= self.max_format_attempts:
-                    print("\n⚠ FORMAT CHECK LIMIT REACHED — forcing accept")
-                    fj_accept = True
+                    fj_accept = True  # forced accept
                 else:
-                    print(f"\n❌ FORMAT REJECTED — restarting Phase 1")
+                    # retry from Phase 1
                     previous_feedback = {
                         "source": "format",
                         "decision": 0,
@@ -110,26 +96,16 @@ class ReviewPhase:
                     }
                     continue
 
-            # =====================================================
-            # PHASE 2 — A2: Refinement
-            # =====================================================
-            print("\n--- Phase 2: Refinement (A2) ---")
+            # -------------- A2 Refinement --------------
             proposed_code = self.a2_refine(current_code, comment)
-
-            print("\n🛠 A2 Refined Code:")
+            print("\n--- Proposed Code ---")
             print(proposed_code)
-
             self.chat_env.append_history("Developer", proposed_code)
 
-            # =====================================================
-            # A3: Quality Estimation
-            # =====================================================
-            print("\n--- Phase 2.5: Quality Estimation (A3) ---")
-
+            # -------------- A3 QE --------------
             quality_attempt_count += 1
             qe_output = self.a3_quality(proposed_code)
-
-            print("\n🧠 A3 Response:")
+            print("\n--- Quality Evaluation ---")
             print(qe_output)
 
             try:
@@ -140,29 +116,37 @@ class ReviewPhase:
                 qe_decision = 0 if "accept" in qe_output.lower() else 1
                 qe_feedback = qe_output
 
-            if qe_decision == 1:
-                if quality_attempt_count >= self.max_quality_attempts:
-                    print("\n⚠ QUALITY LIMIT REACHED — forcing accept")
-                    qe_decision = 0
-                else:
-                    print("\n❌ QE REJECTED — Restarting Phase 1")
-                    previous_feedback = {
-                        "source": "quality",
-                        "decision": 1,
-                        "justification": qe_feedback,
-                        "previous_comments": comment,
-                        "previous_code": proposed_code
-                    }
-                    continue
+            # ============= KEY LOGIC FIX =============
+            if qe_decision == 0:
+                # QE ACCEPT → finish immediately
+                print("\n🎉 FINAL: FORMAT & QUALITY ACCEPTED")
+                current_code = proposed_code
+                self.chat_env.update_code(proposed_code)
+                return proposed_code
 
-            # =====================================================
-            # FINISH — code accepted
-            # =====================================================
-            print("\n🎉 FINAL: FORMAT & QUALITY ACCEPTED")
-            current_code = proposed_code
-            self.chat_env.update_code(proposed_code)
-            break
+            # QE rejected
+            if quality_attempt_count >= self.max_quality_attempts:
+                # Force accept after limit
+                print("\n⚠ QUALITY LIMIT REACHED — forcing accept")
+                print("\n🎉 FINAL: FORMAT & QUALITY ACCEPTED")
+                current_code = proposed_code
+                self.chat_env.update_code(proposed_code)
+                return proposed_code
 
-        print("\n=== FINAL OUTPUT ===")
-        print(current_code)
-        return current_code
+            # Retry from Phase 1
+            previous_feedback = {
+                "source": "quality",
+                "decision": 1,
+                "justification": qe_feedback,
+                "previous_comments": comment,
+                "previous_code": current_code
+            }
+            
+            format_attempt_count = 0
+            continue
+
+        # If we exit max_rounds without acceptance
+        print("\n⚠ MAX ROUNDS REACHED — forcing accept")
+        print("\n🎉 FINAL: FORMAT & QUALITY ACCEPTED")
+        self.chat_env.update_code(proposed_code)
+        return proposed_code

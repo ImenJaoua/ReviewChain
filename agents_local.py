@@ -52,9 +52,9 @@ def load_model(model_name_or_path, device):
 # ============================================================
 # Load models
 # ============================================================
-reviewer_model, reviewer_tokenizer = load_model("models/checkpoint-44000", REVIEWER_DEVICE)
-developer_model, developer_tokenizer = load_model("models/checkpoint-56000", DEVELOPER_DEVICE)
-estimator_model, estimator_tokenizer = load_model("models/checkpoint-6000", ESTIMATOR_DEVICE)
+reviewer_model, reviewer_tokenizer = load_model("models/comment_generator", REVIEWER_DEVICE)
+developer_model, developer_tokenizer = load_model("models/code_refinment", DEVELOPER_DEVICE)
+estimator_model, estimator_tokenizer = load_model("models/quality_estimator", ESTIMATOR_DEVICE)
 format_judge_model, format_judge_tokenizer = load_model("/data/rech/jaouaime/Meta-Llama-3-8B-Instruct",FORMAT_JUDGE_DEVICE)
 
 # ============================================================
