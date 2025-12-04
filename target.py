@@ -569,8 +569,6 @@ class Node(PlenumNode, HasPoolManager):
          client requests it.
         """
         result = reply.result
-
-        
         if result[TXN_TYPE] in (SCHEMA, ISSUER_KEY):
             result = deepcopy(result)
             result[DATA] = jsonSerz.serialize(result[DATA], toBytes=False)
