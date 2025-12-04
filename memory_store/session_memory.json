@@ -33070,5 +33070,13 @@
   {
     "role": "Developer",
     "message": "+ ## Testing `get_data` function\n+ \n+ \n+ \n+ ## Testing `get_data` function\n+ \n+ \n+ \n+ ## Testing `get_data` function\n+ \n+ \n+ \n+ ## Testing `get_data` function\n+ \n+ \n+ \n+ ## Testing `get_data` function\n+ \n+ \n+ \n+ ## Testing `get_data` function\n+ \n+ \n+ \n+ ## Testing `get_data` function\n+ \n+ \n+ \n+ ## Testing `get_data` function\n+ \n+ \n+ \n+ ## Testing `get_data` function\n+ \n+ \n+ \n+ ## Testing `get_data` function\n+ \n+ \n+ \n+ ## Testing `get_data` function\n+ \n+ \n+ \n+ ## Testing `get_data` function\n+ \n+ \n+ \n+ ## Testing `get_data` function\n+ \n+ \n+ \n+ ## Testing `get_data` function\n+ \n+ \n+ \n+ ## Test"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a check to handle the case where `data` is an empty list, as the current implementation may lead to an IndexError when `data` is empty."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -2,7 +2,8 @@ def clean_records(data):\n     cleaned = []\n     for i in range(len(data) -1 ):  \n         record = data[i]\n-        if \"name\" in record and record[\"name\"]:\n+        if data:\n+            if \"name\" in record and record[\"name\"]:\n                 record[\"name\"] = record[\"name\"].strip()\n                 cleaned.append(record)\n     return cleaned"
   }
 ]

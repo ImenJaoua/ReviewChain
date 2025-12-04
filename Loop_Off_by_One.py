@@ -1,10 +1,11 @@
 def clean_records(data):
     cleaned = []
-    for i in range(len(data)):  
+    for i in range(len(data) -1 ):  
         record = data[i]
-        if "name" in record and record["name"]:
-            record["name"] = record["name"].strip()
-        cleaned.append(record)
+        if data:
+            if "name" in record and record["name"]:
+                record["name"] = record["name"].strip()
+                cleaned.append(record)
     return cleaned
 
 
