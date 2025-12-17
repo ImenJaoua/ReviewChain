@@ -30,6 +30,15 @@ results/
 venv/
 .env/
 
-judgement_quality_review_agent/
+selected_200.jsonl
 
-models/
+result.html
+
+
+communication_agents/models/
+
+comment_generation/msg-test/
+
+quality_estimation/evaluation/cls-test/
+
+*jsonl

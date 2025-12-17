@@ -33298,5 +33298,445 @@
   {
     "role": "Reviewer",
     "message": "```suggestion self[self.AVG_RESP_TIME] = self.sum_lt / self[self.SAMPLE_COUNT] ```"
+  },
+  {
+    "role": "Reviewer",
+    "message": "These calculations happen each time a sample is added. You could do this calculation once when the sample count hits zero (which is the first time we're adding a sample)."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -163,15 +163,6 @@ class PingResult(object):\n             self.sum_cn += ping_result.conn_time\n             self.sum_lt += ping_result.latency\n             self.sum_rt += ping_result.resp_time\n-\n-    def _compact_times(self):\n-        if self.conn_times:\n-            self.sum_cn = sum(self.conn_times)\n-            self.sum_lt = sum(self.latencies)\n-            self.sum_rt = sum(self.resp_times)\n-            self.conn_times = []\n-            self.latencies = []\n-            self.resp_times = []\n+        self[self.COMPACTED_CONN_TIMES] = self.conn_times\n         self[self.SAMPLE_COUNT] += 1\n         if self[self.SAMPLE_COUNT] == self.samples_to_avg:\n             self.set_avg_result()"
+  },
+  {
+    "role": "Reviewer",
+    "message": "This operation should be done outside the check, and before the update of self[self.SAMPLE_COUNT]."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -168,11 +168,12 @@ class TcpTesterStats(TesterStatistics):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n-            self._compact_times()\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n             self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n             self[self.AVG_JITTER] = self.sum_jt / self[self.SAMPLE_COUNT]\n+            self._compact_times()\n             self[self.SAMPLE_COUNT] = 0\n             self.sum_cn = self.sum_lt = self.sum_rt = self.sum_jt = 0\n         return self"
+  },
+  {
+    "role": "Reviewer",
+    "message": "It would be nice to see the `//` (integer division) instead of the `/` operation, though it won't affect the actual behavior."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -170,7 +170,7 @@ class NetworkStatistics(OrderedDict):\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n             self._compact_times()\n-            self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n+            self[self.AVG_CONN_TIME] = self.sum_cn // self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n-            self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n+            self[self.AVG_RESP_TIME] = self.sum_rt // self[self.SAMPLE_COUNT]\n             self[self.AVG_DOWNLOAD_SPEED] = (\n                 self.sum_dl / self[self.SAMPLE_COUNT]\n             )"
+  },
+  {
+    "role": "Reviewer",
+    "message": "This is not needed I think."
+  },
+  {
+    "role": "Reviewer",
+    "message": "We need to add this check to avoid division by zero if we've never run this before."
+  },
+  {
+    "role": "Reviewer",
+    "message": "@mikel1991991 This is not the correct way to calculate avg_resp_time. We should calculate it by dividing total_latency by total samples. I think we should change it to: self[self.AVG_RESP_TIME] = self.total_latency / self.sample_count"
+  },
+  {
+    "role": "Reviewer",
+    "message": "I'm not sure if we need this method anymore, since we are calculating the average in the `_compact_times()` method. And it's not used in the tests either. I think we can remove this method."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -165,13 +165,9 @@ class HealthCheckStatistics(object):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n-            self._compact_times()\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n             self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n \n-        self[self.AVG_CONN_TIME] = None\n-        self[self.AVG_LATENCY] = None\n-        self[self.AVG_RESP_TIME] = None\n-        self[self.SAMPLE_COUNT] = 0\n-        self.sum_cn = 0\n-        self.sum_lt = 0\n-        self.sum_rt = 0\n+        self._reset()\n+        self"
+  },
+  {
+    "role": "Reviewer",
+    "message": "The code should be refactored to remove this one-by-one calculation from the dict since the result is the same."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -168,10 +168,7 @@ class NetworkStats(dict):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n-            self._compact_times()\n-            self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n-            self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n-            self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n+            self.calculate_averages()\n             self.calculate_success_ratio()\n             self.calculate_slowest_request()\n             self.calculate_fastest_request()"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Please remove the `# TODO: remove after merge`."
+  },
+  {
+    "role": "Reviewer",
+    "message": "```suggestion self[self.AVG_CONN_TIME] = self.sum_cn / (self[self.SAMPLE_COUNT] or 1) ```"
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -171,7 +171,7 @@ class PerformanceStats(object):\n         if self[self.SAMPLE_COUNT]:\n             \n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n-            self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n+            self[self.AVG_LATENCY] = self.sum_lt / (self[self.SAMPLE_COUNT] or 1)\n             self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n             self[self.STDDEV_CONN_TIME] = self.stddev_cn / self[self.SAMPLE_COUNT]\n             self[self.STDDEV_LATENCY] = self.stddev_lt / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Should it be `self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -171,7 +171,7 @@ class CIMetricData(object):\n         \n         if self[self.SAMPLE_COUNT]:\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n-            self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n+            self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n             self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n             self[self.AVG_TRANS_RATE] = (self.sum_tr / self[self.SAMPLE_COUNT]\n                                          * 100 / self[self.SAMPLE_COUNT])"
+  },
+  {
+    "role": "Reviewer",
+    "message": "```suggestion self[self.SAMPLE_COUNT] = self.sum_cn / self.sum_lt / self.sum_rt ```"
+  },
+  {
+    "role": "Reviewer",
+    "message": "This is a new field and I'm not sure if it's required. I suggest to keep the name default."
+  },
+  {
+    "role": "Reviewer",
+    "message": "Is `scheduler-task-launcher` used in any way in the codebase?"
+  },
+  {
+    "role": "Reviewer",
+    "message": "I think we should add a `log_data` method here to log the data."
+  },
+  {
+    "role": "Reviewer",
+    "message": "this line is not needed here"
+  },
+  {
+    "role": "Reviewer",
+    "message": "```suggestion self[self.AVG_RESP_TIME] = self.sum_rt / self._compact_times() ```"
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -171,7 +171,7 @@ class NetworkSample(Sample):\n         if self[self.SAMPLE_COUNT]:\n             self._compact_times() \n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n-            self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n-            self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n+            self[self.AVG_LATENCY] = self.sum_lt / self._compact_times()\n+            self[self.AVG_RESP_TIME] = self.sum_rt / self._compact_times()\n             self[self.AVG_TRAFFIC] = self.sum_tr / self[self.SAMPLE_COUNT]\n             self[self.AVG_PACKETS] = self.sum_pk / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "```suggestion self[self.AVG_RESP_TIME] = self.sum_rt / self._compact_times() ```"
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -171,6 +171,7 @@ class PingStats(dict):\n         if self[self.SAMPLE_COUNT]:\n             self._compact_times() \n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n+            self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n             self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "I think we should also calculate `self[self.AVG_TTFB]` and `self[self.AVG_RESP_SIZE]` here."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -173,6 +173,12 @@ class JmxStats(dict):\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n             self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n         else:\n+            # If there is no sample, we set the value to 0.\n+            self[self.AVG_CONN_TIME] = 0\n+            self[self.AVG_LATENCY] = 0\n+            self[self.AVG_RESP_TIME] = 0\n+            self[self.AVG_TTFB] = 0\n+            self[self.AVG_RESP_SIZE] = 0\n \n     def _compact_times(self):\n         \"\"\""
+  },
+  {
+    "role": "Reviewer",
+    "message": "This can be done with a one liner: ``` self.update_avg_times() ```"
+  },
+  {
+    "role": "Reviewer",
+    "message": "The `self._compact_times()` is not needed here. It's already called in `__setitem__`."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -167,11 +167,11 @@ class ConnectionSummary(dict):\n \n         :return:\n         \"\"\"\n-        \n+        self._compact_times()\n         if self[self.SAMPLE_COUNT]:\n-            self._compact_times() \n+            \n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n             self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n             self[self.AVG_RESP_SIZE] = self.sum_rs / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "The changes introduced in this commit seem to be related to calculating averages. However, it's unclear why `self._compact_times()` is called before calculating averages. Could you clarify the purpose of this method or its relationship with the averages calculation?"
+  },
+  {
+    "role": "Reviewer",
+    "message": "The added `self._compact_times()` call seems unnecessary. If `self[self.SAMPLE_COUNT]` is zero, the calculations for `self[self.AVG_CONN_TIME]`, `self[self.AVG_LATENCY]`, and `self[self.AVG_RESP_TIME]` will still be zero. Consider removing this line to simplify the code."
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a check for the case where `self[self.SAMPLE_COUNT]` is zero before calculating `self[self.AVG_CONN_TIME]` to prevent division by zero."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -171,6 +171,7 @@ class ConnectionStats(object):\n         self._compact_times()\n         \n         if self[self.SAMPLE_COUNT]:\n+            assert self[self.SAMPLE_COUNT] != 0\n \n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_SEND_TIME] = self.sum_st / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "\"This code change appears to be correct but could be improved for better readability and maintainability. The addition of `self._compact_times()` before the conditional statement seems unnecessary. Could you clarify the purpose of this method or consider removing it if it's not necessary?\""
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -167,10 +167,8 @@ class ConnectionStatistics(dict):\n \n         :return:\n         \"\"\"\n-        self._compact_times()\n-        \n         if self[self.SAMPLE_COUNT]:\n \n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n+            self._compact_times()\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n         else:\n             self[self.AVG_CONN_TIME] = 0"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a check to ensure `self.sum_cn` is initialized before using it, as it's only initialized when `self[self.SAMPLE_COUNT]` is non-zero."
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -171,7 +171,10 @@ class ConnectionStats(dict):\n         self._compact_times()\n         \n         if self[self.SAMPLE_COUNT]:\n+            if not self.sum_cn:\n+                raise ValueError(\"sum_cn must be initialized before accessing it\")\n+\n+            if not self.sum_squared_cn:\n                 raise ValueError(\"sum_squared_cn must be initialized before accessing it\")\n \n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "\"Consider initializing `self.sum_cn` to 0 before using it to calculate the average connection time to ensure accuracy. If `self.sum_cn` is not initialized, it will be `None`, which can cause issues. Add a check to initialize `self.sum_cn` to 0 before using it in the `self[self.AVG_CONN_TIME]` calculation.\""
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -171,7 +171,10 @@ class ConnTimeStatistics(object):\n         self._compact_times()\n         \n         if self[self.SAMPLE_COUNT]:\n+            # Initialize sum_cn to 0 if it's None\n+            if self.sum_cn is None:\n+                self.sum_cn = 0\n+                \n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n         else:\n             self[self.AVG_CONN_TIME] = None"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a check to ensure `self._compact_times()` is called before calculating the average connection time, as it's currently missing in this section of the code."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -167,8 +167,10 @@ class ConnectionStatistics(object):\n \n         :return:\n         \"\"\"\n-        self._compact_times()\n-        \n+        if not self._compact_times_called:\n+            self._compact_times()\n+            self._compact_times_called = True\n+            \n         if self[self.SAMPLE_COUNT]:\n \n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a check to prevent division by zero when calculating `self[self.AVG_CONN_TIME]`. The current implementation may throw a `ZeroDivisionError` if `self[self.SAMPLE_COUNT]` is zero."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -171,7 +171,13 @@ class ConnectionTime(object):\n         self._compact_times()\n         \n         if self[self.SAMPLE_COUNT]:\n+            # Check if the number of samples is zero, and avoid division by zero\n+            if self[self.SAMPLE_COUNT] == 0:\n+                raise ValueError('Cannot calculate average connection time with zero samples')\n+\n+            # Calculate average connection time\n+            self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n+\n             # Calculate median connection time\n             self[self.MED_CONN_TIME] = self.cn_list[int(round(self[self.SAMPLE_COUNT] / 2))]\n             # Calculate 90th percentile connection time"
+  },
+  {
+    "role": "Reviewer",
+    "message": "\"This change introduces a new method `_compact_times()`. To ensure accuracy, it's crucial to verify that `self[self.SAMPLE_COUNT]` is not zero before calculating `self[self.AVG_CONN_TIME]`. Adding a check for zero samples before division would prevent potential errors.\""
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -168,7 +168,7 @@ class ConnectionStatistics(dict):\n         :return:\n         \"\"\"\n         self._compact_times()\n-        \n+        self._check_samples()\n         \n         if self[self.SAMPLE_COUNT]:\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a check for zero samples before calculating average connection time to prevent potential errors."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -167,10 +167,12 @@ class ConnectionStatistics(object):\n \n         :return:\n         \"\"\"\n-        self._compact_times()\n-        \n+        self._compact_times()\n+        if self[self.SAMPLE_COUNT] == 0:\n+            return\n+\n         if self[self.SAMPLE_COUNT]:\n \n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n+            self[self.AVG_CONN_TIME_IN_SEC] = self[self.AVG_CONN_TIME] * 1000  # convert to milliseconds\n         else:\n             self[self.AVG_CONN_TIME] = 0\n             self[self.AVG_CONN_TIME_IN_SEC] = 0"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a check to avoid division by zero when `self[self.SAMPLE_COUNT]` is zero to prevent potential errors."
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -172,7 +172,7 @@ class PingStats(object):\n         if self[self.SAMPLE_COUNT]:\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n-            self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n+            self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n \n         return self"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a check for division by zero when calculating average connection time, latency, and response time to prevent potential division by zero errors. The current implementation of `self._compact_times()` may not handle this edge case."
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -171,7 +171,8 @@ class TimerStats(Dict):\n         self._compact_times() \n         if self[self.SAMPLE_COUNT]:\n             \n-            self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n+            self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT] \\\n+                if self[self.SAMPLE_COUNT] > 0 else None\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n             self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n             self[self.AVG_START_TIME] = self.sum_st / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a check to ensure the `_compact_times` method is called before calculating the averages, as it may not be necessary in this specific context."
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -167,8 +167,8 @@ class TcpStatistics(object):\n \n         :return:\n         \"\"\"\n-        self._compact_times() \n+        self.compact_times()\n         if self[self.SAMPLE_COUNT]:\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n             self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a check to avoid division by zero when calculating the average connection time. The current implementation may throw a ZeroDivisionError if `self[self.SAMPLE_COUNT]` is zero. Instead, you can add a conditional statement to handle this case, e.g., `if self[self.SAMPLE_COUNT] != 0:`. This prevents the division by zero error."
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a check to ensure `self._compact_times()` is called before calculating averages to ensure accurate results."
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -167,6 +167,7 @@ class ProbeResult(object):\n \n         :return:\n         \"\"\"\n+        # self._compact_times() \n         if self[self.SAMPLE_COUNT]:\n             \n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "The addition of `self._compact_times()` seems to be a temporary fix for a bug. Could you provide more context or clarify the original issue that led to this change?"
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -167,9 +167,8 @@ class ConnectionMetrics(metrics.Metrics):\n \n         :return:\n         \"\"\"\n-        self._compact_times() \n         if self[self.SAMPLE_COUNT]:\n-            \n+            \n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n             self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider moving the `self._compact_times()` call to the `update` method, as it appears to be a state-changing operation. This would ensure consistency and avoid potential issues."
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -168,8 +168,10 @@ class StatsDict(dict):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n-            self._compact_times()\n+            # self._compact_times()\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n+            self.sum_cn = self.sum_lt = self.sum_rt = 0\n             self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n             self[self.P95_CONN_TIME] = self.p95_cn\n             self[self.P95_LATENCY] = self.p95_lt"
+  },
+  {
+    "role": "Reviewer",
+    "message": "\"This change appears to be related to updating the average connection time, latency, and response time. For consistency, consider moving the `self._compact_times()` call to the `update` method, as it's a state-changing operation.\""
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -168,7 +168,7 @@ class ConnectionStatistics(StatsDict):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n-            self._compact_times()\n+            self.compact_times()\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n             self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "The changes seem to improve the code. However, it's worth reconsidering the `_compact_times` method's call. The current implementation seems to be unnecessary and potentially misleading. Could you provide more context or explanation for its inclusion?"
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -168,7 +168,7 @@ class LoadStatistics(dict):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n-            self._compact_times()\n+            self._compact_times(self[self.SAMPLE_COUNT])\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n             self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "The introduction of `_compact_times` appears to be a significant change. Given that it's a private method, it's unclear why it's being called here. Could you provide more context or explain the purpose of this method's invocation?"
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -168,10 +168,7 @@ class MonitoringData(dict):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n-            self._compact_times()\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n-            self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n         else:\n             self[self.AVG_CONN_TIME] = self.sum_cn\n             self[self.AVG_LATENCY] = self.sum_lt"
+  },
+  {
+    "role": "Reviewer",
+    "message": "The added line `self._compact_times()` is unnecessary and can be removed, as it appears to be a duplicate of the previous line."
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -168,7 +168,6 @@ class ConnectionStatistics(object):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n-            self._compact_times()\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n             self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider reordering the lines to reduce the number of updates by only calculating the average values once, rather than updating them on every iteration. This could improve performance by reducing unnecessary computations."
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -168,10 +168,10 @@ class RequestMetrics(metrics.Metrics):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n-            self._compact_times()\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n             self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n+            self._compact_times()\n+        else:\n+            self[self.AVG_CONN_TIME] = self.sum_cn\n+            self[self.AVG_LATENCY] = self.sum_lt\n+            self[self.AVG_RESP_TIME] = self.sum_rt\n             self._compact_times()"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider optimizing the calculation of average values by only performing it once, rather than on every iteration. This can be achieved by moving the calculation to the `_compact_times` method, which updates `self.sum_cn`, `self.sum_lt`, and `self.sum_rt`. This method can then be called at the end of the loop, allowing for a more efficient approach."
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -168,11 +168,6 @@ class PingStats(object):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n-            self._compact_times()\n-            self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n-            self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n-            self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n-            self[self.AVG_JITTER] = self.sum_jt / self[self.SAMPLE_COUNT]\n+            self.calculate_averages()\n             self.calculate_loss_rate()\n             self.calculate_jitter()\n             self._reset()"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider optimizing the calculation of average values by only performing it once, rather than on every iteration. This can be achieved by moving the calculation to the `_compact_times` method, which updates `self.sum_cn`, `self.sum_lt`, and `self.sum_rt`. Then, call this method at the end of the loop to ensure efficiency."
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -168,7 +168,7 @@ class BenchmarkResults:\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n-            self._compact_times()\n+            self._calculate_average_times()\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n             self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "The `_compact_times` method is not called before calculating the average times. Consider adding `self._compact_times()` before calculating the averages to ensure accurate results."
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -168,7 +168,7 @@ class TimeSeries(dict):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n-            self._compact_times()\n+            self._compact_times()\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n             self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a check to ensure `self[self.SAMPLE_COUNT]` is not zero before calculating average connection time, latency, and response time to prevent division by zero errors."
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -168,10 +168,17 @@ class MonitoringStatistics(dict):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n+            # Avoid ZeroDivisionError\n+            if self[self.SAMPLE_COUNT] == 0:\n+                return\n+\n             self._compact_times()\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n+            self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n+            self[self.STD_DEV_CONN_TIME] = self.sum_cn_squared / self[\n+                self.SAMPLE_COUNT\n+            ] - self[self.AVG_CONN_TIME] ** 2\n \n     def _compact_times(self"
+  },
+  {
+    "role": "Reviewer",
+    "message": "\"Before calculating average connection time, latency, and response time, please ensure `self[self.SAMPLE_COUNT]` is non-zero to prevent division by zero errors.\""
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -168,7 +168,8 @@ class Stats(dict):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n-            self._compact_times()\n+            # Before calculating average connection time, latency, and response time,\n+            # please ensure `self[self.SAMPLE_COUNT]` is non-zero to prevent division by zero errors.\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n             self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "\"Consider adding a check for `self[self.SAMPLE_COUNT]` being zero before calculating averages to prevent division by zero errors.\""
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -170,6 +170,8 @@ class ConnectionMetrics(object):\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n             self._compact_times()\n+            # Prevent division by zero\n+            if self[self.SAMPLE_COUNT] != 0:\n                 self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n                 self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n                 self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a check to ensure `self[self.SAMPLE_COUNT]` is not zero before calculating average connection time, latency, and response time to prevent division by zero errors."
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -168,7 +168,13 @@ class DataPoint(dict):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n-            self._compact_times()\n+            self._compact_times()\n+            if self[self.SAMPLE_COUNT] == 0:\n+                raise ValueError(\"sample count is zero\")\n+            self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n+            self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n+            self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n \n     def _compact_times(self):\n         \"\"\""
+  },
+  {
+    "role": "Reviewer",
+    "message": "The `_compact_times` method should be called before calculating average connection time, latency, and response time to prevent division by zero errors."
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -168,8 +168,8 @@ class ConnStats(object):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n-            self._compact_times()\n-            self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n+            self._compact_times()\n+            self[self.AVG_CONN_TIME] = self._avg_conn_time()\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n             self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n             self[self.AVG_THROUGHPUT] = self.sum_tp / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a check to prevent division by zero when calculating averages, as the current implementation may result in a ZeroDivisionError if `self[self.SAMPLE_COUNT]` is zero. You can add a conditional statement to handle this scenario."
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -168,7 +168,9 @@ class LatencyStats(object):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n-            self._compact_times()\n+            if self[self.SAMPLE_COUNT] > 0:\n+                self._compact_times()\n+\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n             self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "\"Consider adding a check to prevent zero division when calculating averages. The current implementation may result in a ZeroDivisionError if `self[self.SAMPLE_COUNT]` is zero. To handle this, add a conditional statement to prevent this scenario.\""
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -171,7 +171,10 @@ class Stats(dict):\n         if self[self.SAMPLE_COUNT]:\n             self._compact_times()\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n-            self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n-            self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n+            if self[self.SAMPLE_COUNT] > 0:\n+                self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n+                self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n+            else:\n+                self[self.AVG_LATENCY] = self.sum_lt\n+                self[self.AV"
+  },
+  {
+    "role": "Reviewer",
+    "message": "\"This change appears to be unnecessary and may introduce a potential ZeroDivisionError. To prevent this, consider adding a check for zero division when calculating averages. If zero is a possible value in `self[self.SAMPLE_COUNT]`, it's safer to add a conditional statement to handle this case.\""
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -168,7 +168,7 @@ class LatencyStats(object):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n-            self._compact_times()\n+            self._compact_times(self)\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n             self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "The `self._compact_times()` call seems unnecessary since `self.sum_cn`, `self.sum_lt`, and `self.sum_rt` are not being reassigned. Consider removing this method call for efficiency."
+  },
+  {
+    "role": "Reviewer",
+    "message": "The suggested changes are valid, but the comment still seems to be referencing the `self._compact_times()` method, which is not necessary since `self.sum_cn`, `self.sum_lt`, and `self.sum_rt` are not reassigned. Consider removing the method call for efficiency."
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -168,7 +168,6 @@ class NetworkMetrics(dict):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n-            self._compact_times() \n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n             self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a check for division by zero in the calculation of `self[self.AVG_CONN_TIME]`, `self[self.AVG_LATENCY]`, and `self[self.AVG_RESP_TIME]` to prevent division by zero errors. You can use the `if` statement to handle this case: `if self[self.SAMPLE_COUNT] != 0:`."
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -168,7 +168,7 @@ class LatencyStats(object):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n-\n+            if self[self.SAMPLE_COUNT] != 0:\n                 self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n                 self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n                 self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider adding a check for `self[self.SAMPLE_COUNT]` to prevent division by zero when calculating averages."
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -168,7 +168,7 @@ class ProbeResult(object):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n-\n+            if self[self.SAMPLE_COUNT] > 0:\n                 self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n                 self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n                 self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]"
+  },
+  {
+    "role": "Reviewer",
+    "message": "The current implementation seems to be incorrect as it calculates averages without checking for zero division. To avoid zero division errors, consider adding a check for `self[self.SAMPLE_COUNT]` before calculating averages."
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -168,6 +168,12 @@ class PingStatistics(dict):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n+            if self[self.SAMPLE_COUNT] > 0:\n+                self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n+                self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n+                self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n+            else:\n+                self[self.AVG_CONN_TIME] = self.sum_cn\n+                self[self.AVG_LATENCY] = self.sum_lt\n+                self[self.AVG_RESP_TIME] = self.sum_rt\n             self[self.PACKET_LOSS] = self.packet_loss / self[self.SAMP"
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider removing the `if` statement since it's always true. Instead, directly assign the values to `self[self.AVG_CONN_TIME]`, `self[self.AVG_LATENCY]`, and `self[self.AVG_RESP_TIME]`. This simplification improves readability and reduces unnecessary computation."
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -168,10 +168,10 @@ class Stats(dict):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n-\n             self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n             self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n             self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n-        else:\n-            self[self.AVG_CONN_TIME] = self.sum_cn\n+\n+        self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n+        self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n+        self[self.AVG_RESP_TIME] = self.sum_rt /"
+  },
+  {
+    "role": "Reviewer",
+    "message": "\"Consider simplifying the code by directly assigning the values to `self[self.AVG_CONN_TIME]`, `self[self.AVG_LATENCY]`, and `self[self.AVG_RESP_TIME]` instead of using an `if` statement. This change improves readability and reduces unnecessary computation.\""
+  },
+  {
+    "role": "Developer",
+    "message": "@@ -168,7 +168,6 @@ class Metrics(dict):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n-            self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n-            self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n-            self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n+            self[self.AVG_CONN_TIME], self[self.AVG_LATENCY], self[self.AVG_RESP_TIME] = self.sum_cn / self[self.SAMPLE_COUNT], self.sum_lt / self[self.SAMPLE_COUNT], self.sum_rt / self[self.SAMPLE_COUNT]\n         else:\n             self[self.AVG_CONN_TIME] = self.sum_cn\n             self[self."
+  },
+  {
+    "role": "Reviewer",
+    "message": "Consider simplifying the code by directly assigning the values to `self[self.AVG_CONN_TIME]`, `self[self.AVG_LATENCY]`, and `self[self.AVG_RESP_TIME]` instead of using an `if` statement. This change improves readability and reduces unnecessary computation."
+  },
+  {
+    "role": "Developer",
+    "message": "--- \n@@ -168,8 +168,13 @@ class PingResult(object):\n         :return:\n         \"\"\"\n         if self[self.SAMPLE_COUNT]:\n-\n-            self[self.AVG_CONN_TIME] = self.sum_cn / self[self.SAMPLE_COUNT]\n-            self[self.AVG_LATENCY] = self.sum_lt / self[self.SAMPLE_COUNT]\n-            self[self.AVG_RESP_TIME] = self.sum_rt / self[self.SAMPLE_COUNT]\n+            self[self.AVG_CONN_TIME] = self.cn_avg\n+            self[self.AVG_LATENCY] = self.lt_avg\n+            self[self.AVG_RESP_TIME] = self.rt_avg\n+\n+        self[self.AVG_CONN_TIME] = 0\n+        self[self.AVG_LATENCY] = 0\n+        self[self.AVG"
   }
 ]

@@ -1,142 +1,255 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>ReviewChain Live Dialogue</title>
-<style>
+  <meta charset="UTF-8" />
+  <title>ReviewChain Example – Reject then Accept</title>
+  <style>
     body {
-        font-family: "Inter", sans-serif;
-        background: #f7f7f7;
-        margin: 0;
-        padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f7;
+      margin: 0;
+      padding: 2rem;
+      color: #111827;
     }
-    .page {
-        max-width: 900px;
-        margin: 40px auto;
-        padding: 0 20px;
+
+    .app-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
     }
-    h1 {
-        font-size: 34px;
-        font-weight: 700;
-        color: #333;
-        display: flex;
-        align-items: center;
-        gap: 14px;
+
+    .app-subtitle {
+      color: #6b7280;
+      margin-bottom: 2rem;
     }
-    .textarea-box {
-        background: #eef1f6;
-        border-radius: 10px;
-        padding: 16px;
-        min-height: 180px;
-        border: 1px solid #d0d4db;
-        white-space: pre-wrap;
-        font-family: monospace;
-        color: #444;
+
+    .round {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.03);
+      padding: 1.5rem 1.75rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid #e5e7eb;
     }
-    .sliders {
-        display: flex;
-        justify-content: space-between;
-        margin-top: 20px;
+
+    .round-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
     }
-    .slider-block {
-        width: 30%;
-        text-align: center;
+
+    .round-badge {
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.2rem 0.7rem;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #4338ca;
     }
-    .green-box {
-        background: #d8f5d0;
-        border: 1px solid #9ddc91;
-        padding: 14px;
-        border-radius: 8px;
-        color: #2f6622;
-        margin-top: 18px;
-        font-size: 15px;
+
+    .round-title {
+      font-weight: 600;
+      font-size: 1.05rem;
     }
-    h2 {
-        font-size: 28px;
-        margin-top: 40px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
+
+    .section {
+      margin-bottom: 1.25rem;
     }
-    .comment-block {
-        margin-top: 14px;
-        background: #ffffff;
-        border: 1px solid #d9d9d9;
-        padding: 20px;
-        border-radius: 12px;
+
+    .section-title {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
-    .comment-title {
-        font-size: 20px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 10px;
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.15rem 0.6rem;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
     }
-    .comment-text {
-        margin-top: 12px;
-        line-height: 1.5;
-        color: #333;
+
+    .chip-reject {
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
     }
-    code {
-        background: #f0f0f0;
-        padding: 2px 5px;
-        border-radius: 4px;
-        font-family: monospace;
+
+    .chip-accept {
+      background: #ecfdf3;
+      color: #166534;
+      border: 1px solid #bbf7d0;
     }
-</style>
+
+    .comment-box,
+    .json-box,
+    .code-box {
+      background: #f9fafb;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      padding: 0.75rem 0.9rem;
+      font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.9rem;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-x: auto;
+    }
+
+    .json-box {
+      background: #0b1120;
+      color: #e5e7eb;
+      border-color: #111827;
+    }
+
+    .code-box {
+      background: #020617;
+      color: #e5e7eb;
+      border-color: #111827;
+    }
+
+    .diff {
+      font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.9rem;
+      padding: 0.75rem 0.9rem;
+      border-radius: 8px;
+      background: #020617;
+      color: #e5e7eb;
+      border: 1px solid #111827;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    .diff .removed {
+      color: #fecaca;
+    }
+
+    .diff .added {
+      color: #bbf7d0;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: #e5e7eb;
+      color: #374151;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-left: 0.4rem;
+    }
+
+    .footer {
+      margin-top: 2rem;
+      font-size: 0.8rem;
+      color: #9ca3af;
+      text-align: center;
+    }
+  </style>
 </head>
-
 <body>
-<div class="page">
+  <div class="app">
+    <div class="app-title">💬 ReviewChain Live Dialogue</div>
+    <div class="app-subtitle">Hard-coded example: rejected comment → accepted comment → code diff</div>
 
-    <!-- Title -->
-    <h1>💬 ReviewChain Live Dialogue</h1>
+    <!-- Round 1 -->
+    <section class="round">
+      <div class="round-header">
+        <div class="round-badge">Round 1</div>
+        <div class="round-title">Reviewer comment is rejected by Format Judge</div>
+      </div>
 
-    <!-- Code Area (faked) -->
-    <div class="textarea-box">
-@@ -565,7 +569,12 @@ def storeTxnAndSendToClient(self, reply):
-     client requests it.
-     """
-     result = reply.result
-+    if result[TXN_TYPE] in (SCHEMA, ISSUER_KEY):
-+        result = deepcopy(result)
+      <div class="section">
+        <div class="section-title">
+          💬 Reviewer Comment
+        </div>
+        <div class="comment-box">
+This looks wrong.
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">
+          📋 Format Judge Response
+          <span class="chip chip-reject">Rejected</span>
+        </div>
+        <div class="json-box">
+{
+  "decision": "REJECT",
+  "feedback": "Comment is too short and unclear. Must reference a specific part of the code and give actionable feedback."
+}
+        </div>
+      </div>
+    </section>
+
+    <!-- Round 2 -->
+    <section class="round">
+      <div class="round-header">
+        <div class="round-badge">Round 2</div>
+        <div class="round-title">Reviewer retries → accepted, code refined, quality approved</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">
+          💬 Reviewer Comment (retry)
+        </div>
+        <div class="comment-box">
+The parameter <code>_namespace</code> is declared in the constructor but never used anywhere in the class.
+To improve readability and avoid unused parameters, remove <code>_namespace</code> from the constructor if it has no functional role.
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">
+          📋 Format Judge Response
+          <span class="chip chip-accept">Accepted</span>
+        </div>
+        <div class="json-box">
+{
+  "decision": "ACCEPT",
+  "feedback": "Clear, actionable, and references a specific code element."
+}
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">
+          👩‍💻 Developer Refined Code <span class="pill">Python</span>
+        </div>
+        <pre class="diff"><span class="removed">- def __init__(self, _namespace, parent):</span>
+<span class="added">+ def __init__(self, parent):</span>
+     """Constructor."""
+     self.parent = parent
+     self.buffer = []
+</pre>
+      </div>
+
+      <div class="section">
+        <div class="section-title">
+          🧠 Quality Estimator
+          <span class="chip chip-accept">Accepted</span>
+        </div>
+        <div class="json-box">
+{
+  "decision": 0,
+  "justification": "Removing the unused parameter improves clarity without changing behaviour."
+}
+        </div>
+      </div>
+    </section>
+
+    <div class="footer">
+      Example only – plug this into your app to demo reject → retry → accept behaviour.
     </div>
-
-    <!-- Sliders -->
-    <div class="sliders">
-        <div class="slider-block">
-            <div>Maximum rounds:</div>
-            <strong>10</strong>
-        </div>
-        <div class="slider-block">
-            <div>Max format attempts:</div>
-            <strong>3</strong>
-        </div>
-        <div class="slider-block">
-            <div>Max quality attempts:</div>
-            <strong>6</strong>
-        </div>
-    </div>
-
-    <!-- Connected box -->
-    <div class="green-box">
-        ✅ Connected to backend
-    </div>
-
-    <!-- Round Header -->
-    <h2>🌀 Round 1</h2>
-
-    <!-- Reviewer Comment -->
-    <div class="comment-block">
-        <div class="comment-title">
-            🧑‍💼💬 Review Comment
-        </div>
-
-        <div class="comment-text">
-            <p><code>deepcopy</code> is not needed here. The <code>result</code> is a dictionary and is never modified after this line.</p>
-        </div>
-    </div>
-
-</div>
+  </div>
 </body>
 </html>
