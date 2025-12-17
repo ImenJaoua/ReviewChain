@@ -42,3 +42,5 @@ comment_generation/msg-test/
 quality_estimation/evaluation/cls-test/
 
 *jsonl
+
+comment_generation/evaluation/checkpoint-*/
