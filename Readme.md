@@ -19,7 +19,6 @@ Target users:
 
   - Researchers exploring multi-agent LLM systems for software engineering
 
-
 The main advantages of Review Chain over similar tools include:
 
 - Free and open-source usage.
@@ -60,7 +59,7 @@ Each stage is handled by a specialized LLM, making the system:
 
 ReviewChain runs locally and integrates seamlessly with Git repositories. A single command triggers the full review pipeline.
 
-
+<img width="1032" height="544" alt="user_experience" src="https://github.com/user-attachments/assets/d7e64d18-9ed3-4997-8c43-c7eec8e5c753" />
 
 ## Installation & Setup
 
