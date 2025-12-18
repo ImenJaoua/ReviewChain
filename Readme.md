@@ -1,18 +1,22 @@
 # ReviewChain
 ## An End-to-End, Feedback-Driven LLM System for Automated Code Review
-Review Chain is an open-source, AI-powered tool designed to streamline and automate the code review process.
 
-This project is built on intelligent communication between multiple AI agents.
-These agents are responsible for reviewing and, when necessary, refining submitted code changes before they are merged into a target GitHub repository.
+ReviewChain is a lightweight command-line tool that automates code review using large language models (LLMs). Unlike existing tools that perform review tasks in isolation, ReviewChain models code review as an iterative, multi-stage pipeline, enabling comments, refinements, and quality assessment to inform each other through explicit feedback.
 
-Submitted code passes through a structured code-review pipeline.
+## Why ReviewChain?
 
-In the first step, a GitHub hunk is generated based on the changes applied to the file.
-This hunk then moves through the pipeline, where relevant review comments are generated, required improvements are automatically applied, and the code is validated. Once the system approves the changes, the final refined version can replace the existing code after developer confirmation.
+Code review is essential but time-consuming. Developers often spend significant effort writing review comments, revising code, and validating changes—especially for small or repetitive issues.
 
-Review Chain significantly reduces the time and effort required for code review and approval. What traditionally takes hours can be completed in seconds using a single command.
+Target users: 
 
-In general, all Python and Java developers can benefit from this tool regardless of their project stack. By using the provided command-line interface, developers can easily review, refine, and update their code before committing it to GitHub.
+  - Software developers
+
+  - Open-source contributors
+
+  - Teams seeking faster, more consistent code reviews
+
+  - Researchers exploring multi-agent LLM systems for software engineering
+
 
 The main advantages of Review Chain over similar tools include:
 
@@ -25,6 +29,31 @@ The main advantages of Review Chain over similar tools include:
 - Secure for personal projects, with no concerns about data leakage due to its open-source nature.
 
 - Seamless Git integration, connecting to GitHub through system credentials without additional configuration steps.
+
+  ## Key Features
+  ### Iterative Review Pipeline
+
+ReviewChain decomposes code review into four structured stages:
+
+  1. Review Comment Generation – identifies issues and suggestions
+
+  2. Comment Format Validation – ensures comments are clear and actionable
+
+  3. Code Refinement – applies feedback to improve the code
+
+  4. Quality Estimation – decides whether further refinement is needed
+
+These stages are connected through an explicit feedback loop, allowing the system to improve outputs across multiple rounds.
+
+### Modular LLM Components
+Each stage is handled by a specialized LLM, making the system:
+
+  - Easier to extend or replace components
+
+  - More interpretable than monolithic approaches
+
+  - Well-suited for experimentation and research
+
 
 ## Command line tool
 
