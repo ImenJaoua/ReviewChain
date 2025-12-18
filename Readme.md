@@ -9,7 +9,7 @@ ReviewChain is not a code generation assistant. Instead, it targets a largely un
 
 ## Why ReviewChain?
 
-Code review is essential but time-consuming. Developers often spend significant effort writing review comments, revising code, and validating changes—especially for small or repetitive issues.
+Code review is essential but time-consuming. Developers often spend significant effort writing review comments, revising code, and validating changes, especially for small or repetitive issues.
 
 Target users: 
 
