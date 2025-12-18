@@ -1,4 +1,4 @@
-# Review Chain
+# ReviewChain
 
 Review Chain is an open-source, AI-powered tool designed to streamline and automate the code review process.
 
