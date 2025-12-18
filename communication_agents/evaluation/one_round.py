@@ -25,7 +25,16 @@ class ReviewPhase:
 
     # ---------- One-round pipeline ----------
     def execute(self):
+        """
+        Execute the one-round review-refine pipeline.
+        
+        Returns:
+            tuple: (refined_code, comment)
+        """
         code = self.chat_env.get("code")
+
+        # Default value
+        comment = None
 
         # A1 COMMENT
         print("\n--- A1: Comment Generation ---")
@@ -37,19 +46,4 @@ class ReviewPhase:
         refined = self.a2_refine(code, comment)
         print("A2 Refined Code:", refined)
 
-        # A3 QUALITY
-        print("\n--- A3: Quality Estimation ---")
-        qe_output = self.a3_quality(refined)
-        print("A3 Output:", qe_output)
-
-        # Try to parse decision
-        try:
-            q = json.loads(qe_output)
-            decision = int(q.get("decision", 0))
-        except:
-            decision = 0 if "accept" in qe_output.lower() else 1
-
-        if decision == 1:
-            print("⚠️ Quality rejected — but single round → keeping refined code")
-
-        return refined.strip()
+        return refined.strip(), comment

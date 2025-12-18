@@ -5,7 +5,7 @@ from codebleu import calc_codebleu
 # ============================================================
 # CONFIG
 # ============================================================
-RESULTS_PATH = "results/refinement_results_reviewchain12.jsonl"
+RESULTS_PATH = "refinement_results_reviewchain_one_round.jsonl"
 
 CODEBLEU_LANG_MAP = {
     "python": "python", "java": "java", "cpp": "cpp",

@@ -8,8 +8,8 @@ from datasets import Dataset
 from chat_env import ChatEnv, ChatEnvConfig
 from one_round import ReviewPhase   # your new single-round ReviewPhase
 
-SELECTED_FILE = "selected_200.jsonl"
-OUTPUT_REFINEMENT = "results/refinement_results_reviewchain_200.jsonl"
+SELECTED_FILE = "selected_50.jsonl"
+OUTPUT_REFINEMENT = "refinement_results_reviewchain_one_round.jsonl"
 
 print(f"📂 Loading selected examples from {SELECTED_FILE}")
 examples = []
@@ -32,11 +32,12 @@ def prepare_sample(ex):
     return {
         "initial_code": initial_code,
         "target_code": ex["hunk"].strip(),
-        "norm_lang": ex["norm_lang"]
+        "norm_lang": ex["norm_lang"],
+        "msg": ex["comment"].strip()
     }
 
 dataset = dataset.map(prepare_sample)
-
+#dataset = dataset.select(range(5))  # for quick testing
 # --------------------------------------------------------------
 # Run ONE-ROUND ReviewChain system
 # --------------------------------------------------------------
@@ -54,10 +55,14 @@ for ex in tqdm(dataset, desc="ReviewChain Single-Round"):
     # ONE-ROUND ReviewPhase, no need to pass max_rounds
     phase = ReviewPhase(chat_env)
 
-    refined = phase.execute().strip()
+    # Unpack both the refined code and the comment
+    refined, comment = phase.execute()
+    refined = refined.strip()
 
     preds.append({
         "prediction": refined,
+        "comment": comment,
+        "msg": ex["msg"],
         "reference": ex["target_code"],
         "lang": ex["norm_lang"]
     })
