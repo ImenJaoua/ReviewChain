@@ -1,4 +1,3 @@
-# phase_backend.py
 import json
 import re
 import requests
@@ -40,6 +39,12 @@ class ReviewPhase:
     # EXECUTION PIPELINE
     # -----------------------------
     def execute(self):
+        """
+        Execute the review-refine loop.
+        
+        Returns:
+            tuple: (refined_code, accepted_comment)
+        """
         current_code = self.chat_env.get("code")
         print("=== INITIAL CODE ===")
         print(current_code)
@@ -48,22 +53,25 @@ class ReviewPhase:
         format_attempt_count = 0
         quality_attempt_count = 0
 
+        # Default values - ensure these are always defined
+        comment = None
+        proposed_code = current_code
+
         for round_id in range(self.max_rounds):
 
             print(f"\n================ ROUND {round_id + 1} ================")
+            
+            # Track iteration
+            self.chat_env.next_iteration()
 
             # -------------- A1 --------------
             comment = self.a1_comment(current_code, previous_feedback)
             self.chat_env.append_history("Reviewer", comment)
-            #print("\n--- Reviewer Comments ---")
-            #print(comment)
             self.chat_env.update("comments", comment)
 
             # -------------- A4 Format Judge --------------
             format_attempt_count += 1
             format_output = self.a4_format_judge(comment)
-            #print("\n--- Format Judgment ---")
-            #print(format_output)
 
             # parse decision
             raw = re.sub(
@@ -98,15 +106,11 @@ class ReviewPhase:
 
             # -------------- A2 Refinement --------------
             proposed_code = self.a2_refine(current_code, comment)
-            #print("\n--- Proposed Code ---")
-            #print(proposed_code)
             self.chat_env.append_history("Developer", proposed_code)
 
             # -------------- A3 QE --------------
             quality_attempt_count += 1
             qe_output = self.a3_quality(proposed_code)
-            #print("\n--- Quality Evaluation ---")
-            #print(qe_output)
 
             try:
                 q = json.loads(qe_output)
@@ -116,23 +120,21 @@ class ReviewPhase:
                 qe_decision = 0 if "accept" in qe_output.lower() else 1
                 qe_feedback = qe_output
 
-            # ============= KEY LOGIC FIX =============
+            # ============= KEY LOGIC =============
             if qe_decision == 0:
                 # QE ACCEPT → finish immediately
-                #print("\n🎉 FINAL: FORMAT & QUALITY ACCEPTED")
                 current_code = proposed_code
                 self.chat_env.update_code(proposed_code)
                 print(proposed_code)
-                return proposed_code
+                return proposed_code, comment  # Return both!
 
             # QE rejected
             if quality_attempt_count >= self.max_quality_attempts:
                 # Force accept after limit
-                #print("\n⚠ QUALITY LIMIT REACHED — forcing accept")
-                #print("\n🎉 FINAL: FORMAT & QUALITY ACCEPTED")
                 current_code = proposed_code
                 self.chat_env.update_code(proposed_code)
-                return proposed_code
+                print(proposed_code)
+                return proposed_code, comment  # Return both!
 
             # Retry from Phase 1
             previous_feedback = {
@@ -147,8 +149,6 @@ class ReviewPhase:
             continue
 
         # If we exit max_rounds without acceptance
-        #print("\n⚠ MAX ROUNDS REACHED — forcing accept")
-        #print("\n🎉 FINAL: FORMAT & QUALITY ACCEPTED")
         self.chat_env.update_code(proposed_code)
         print(proposed_code)
-        return proposed_code
+        return proposed_code, comment  # Return both!
