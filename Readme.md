@@ -30,8 +30,8 @@ The main advantages of Review Chain over similar tools include:
 
 - Seamless Git integration, connecting to GitHub through system credentials without additional configuration steps.
 
-  ## Key Features
-  ### Iterative Review Pipeline
+## Key Features
+### 🔁 Iterative Review Pipeline
 
 ReviewChain decomposes code review into four structured stages:
 
@@ -45,7 +45,7 @@ ReviewChain decomposes code review into four structured stages:
 
 These stages are connected through an explicit feedback loop, allowing the system to improve outputs across multiple rounds.
 
-### Modular LLM Components
+### 🧩 Modular LLM Components
 Each stage is handled by a specialized LLM, making the system:
 
   - Easier to extend or replace components
@@ -54,8 +54,13 @@ Each stage is handled by a specialized LLM, making the system:
 
   - Well-suited for experimentation and research
 
+### 💻 Simple Command-Line Interface
 
-## Command line tool
+ReviewChain runs locally and integrates seamlessly with Git repositories. A single command triggers the full review pipeline.
+
+
+
+## Installation & Setup
 
 After cloning the repository, run the following command inside your virtual environment to install the package:
 
@@ -66,7 +71,7 @@ pip install .
 Once the package is installed, you can run it using the following command:
 
 ```bash
-cmtcheck --path "path/to/target/file" --branch "target-branch-name"
+reviewchain --path "path/to/target/file" --branch "target-branch-name"
 ```
 
 Attention: The target file must already exist in your Git repository.
