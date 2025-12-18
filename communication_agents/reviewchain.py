@@ -12,7 +12,7 @@ import difflib
 
 import re
 
-from cmtcheck_main import main as cmtcheck_main
+from communication_agents.reviewchain_main import main as cmtcheck_main
 
 import difflib
 
@@ -144,6 +144,112 @@ class DiffParser:
             print(f"DEBUG: Converted file '{filename}' - {len(content)} characters")
         
         return result
+
+
+class ColorFormatter:
+    """Utility class for adding ANSI color codes and formatting to text."""
+    
+    # ANSI color codes
+    RESET = '\033[0m'
+    RED = '\033[91m'
+    GREEN = '\033[92m'
+    CYAN = '\033[96m'
+    YELLOW = '\033[93m'
+    BLUE = '\033[94m'
+    MAGENTA = '\033[95m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+    
+    @staticmethod
+    def colorize(text, color_code):
+        """Apply a color code to text and reset afterwards."""
+        return f"{color_code}{text}{ColorFormatter.RESET}"
+    
+    @staticmethod
+    def red(text):
+        """Make text red."""
+        return ColorFormatter.colorize(text, ColorFormatter.RED)
+    
+    @staticmethod
+    def green(text):
+        """Make text green."""
+        return ColorFormatter.colorize(text, ColorFormatter.GREEN)
+    
+    @staticmethod
+    def cyan(text):
+        """Make text cyan."""
+        return ColorFormatter.colorize(text, ColorFormatter.CYAN)
+    
+    @staticmethod
+    def yellow(text):
+        """Make text yellow."""
+        return ColorFormatter.colorize(text, ColorFormatter.YELLOW)
+    
+    @staticmethod
+    def blue(text):
+        """Make text blue."""
+        return ColorFormatter.colorize(text, ColorFormatter.BLUE)
+    
+    @staticmethod
+    def magenta(text):
+        """Make text magenta."""
+        return ColorFormatter.colorize(text, ColorFormatter.MAGENTA)
+    
+    @staticmethod
+    def bold(text):
+        """Make text bold."""
+        return ColorFormatter.colorize(text, ColorFormatter.BOLD)
+    
+    @staticmethod
+    def underline(text):
+        """Make text underlined."""
+        return ColorFormatter.colorize(text, ColorFormatter.UNDERLINE)
+    
+    @staticmethod
+    def bold_cyan(text):
+        """Make text bold and cyan."""
+        return f"{ColorFormatter.BOLD}{ColorFormatter.CYAN}{text}{ColorFormatter.RESET}"
+
+
+def display_github_style_diff(diff_text, filename):
+    """
+    Display the diff in GitHub-style format with color-coded additions and deletions.
+    This function handles the specific hunk diff display logic.
+    """
+    lines = diff_text.split('\n')
+    
+    print("\n" + "=" * 80)
+    print(ColorFormatter.bold_cyan(f"📝 Detected Changes in: {filename}"))
+    print("=" * 80 + "\n")
+    
+    additions = 0
+    deletions = 0
+    
+    for line in lines:
+        if line.startswith('@@'):
+            # Hunk header - display in cyan
+            print(ColorFormatter.cyan(line))
+        elif line.startswith('+') and not line.startswith('+++'):
+            # Addition - display in green
+            print(ColorFormatter.green(line))
+            additions += 1
+        elif line.startswith('-') and not line.startswith('---'):
+            # Deletion - display in red
+            print(ColorFormatter.red(line))
+            deletions += 1
+        elif line.startswith('+++') or line.startswith('---'):
+            # File headers - display in bold
+            print(ColorFormatter.bold(line))
+        else:
+            # Context lines
+            print(line)
+    
+    # Summary
+    print("\n" + "-" * 80)
+    summary = f"{ColorFormatter.bold('Summary:')} {ColorFormatter.green(f'+{additions} additions')}, {ColorFormatter.red(f'-{deletions} deletions')}"
+    print(summary)
+    print("-" * 80 + "\n")
+
 
 def get_file_from_github(path, branch="main"):
     try:
@@ -313,7 +419,13 @@ def main():
 
     code_diff = "\n".join(code_diff)
 
-    final_code = cmtcheck_main(initial_code=code_diff)
+    display_github_style_diff(code_diff, path)
+
+    print("\n" + "=" * 80)
+    print(ColorFormatter.bold_cyan(f"🚀 Review Chain Pipeline"))
+    print("=" * 80 + "\n")
+
+    final_code = cmtcheck_main(initial_code=code_diff)    
 
     parser = DiffParser()
 
@@ -321,9 +433,16 @@ def main():
 
     # Print results
     for filename, content in files.items():
-        print(f"=== {filename} ===")
+        print("\n" + "=" * 80)
+        print(ColorFormatter.bold_cyan(f"⚙️  Proposed Refinement"))
+        print("=" * 80 + "\n")
         print(content)
         print("\n")
+
+
+    print("\n" + "=" * 80)
+    print(ColorFormatter.bold_cyan(f"👤 User Decision"))
+    print("=" * 80 + "\n")
     
     # User confirmation step
     while True:
@@ -344,4 +463,3 @@ def main():
             break
         else:
             print("Invalid input. Please enter 'y' for yes or 'n' for no.")
-
