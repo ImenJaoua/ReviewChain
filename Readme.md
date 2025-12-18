@@ -5,6 +5,8 @@ ReviewChain is a lightweight command-line tool that automates code review using 
 
 ReviewChain is not a code generation assistant. Instead, it targets a largely underserved part of the development workflow: iterative code review of existing changes. It focuses on helping developers review, refine, and improve code after it is written, closely mirroring real-world human review practices.
 
+<img width="1264" height="491" alt="diagram" src="https://github.com/user-attachments/assets/1c6d5c23-7176-4b17-9c8e-a9844476deb5" />
+
 ## Why ReviewChain?
 
 Code review is essential but time-consuming. Developers often spend significant effort writing review comments, revising code, and validating changes—especially for small or repetitive issues.
