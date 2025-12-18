@@ -5,7 +5,7 @@ ReviewChain is a lightweight command-line tool that automates code review using 
 
 ReviewChain is not a code generation assistant. Instead, it targets a largely underserved part of the development workflow: iterative code review of existing changes. It focuses on helping developers review, refine, and improve code after it is written, closely mirroring real-world human review practices.
 
-<img width="1264" height="491" alt="diagram" src="https://github.com/user-attachments/assets/1c6d5c23-7176-4b17-9c8e-a9844476deb5" />
+<img width="1291" height="501" alt="diagram" src="https://github.com/user-attachments/assets/a1f13473-5119-4c91-93c9-d66122321745" />
 
 ## Why ReviewChain?
 
@@ -31,7 +31,7 @@ The main advantages of Review Chain over similar tools include:
 
 - Secure for personal projects, with no concerns about data leakage due to its open-source nature.
 
-- Seamless Git integration, connecting to GitHub through system credentials without additional configuration steps.
+- Easy Git integration, connecting to GitHub through system credentials without additional configuration steps.
 
 ## Key Features
 ### 🔁 Iterative Review Pipeline
@@ -59,7 +59,7 @@ Each stage is handled by a specialized LLM, making the system:
 
 ### 💻 Simple Command-Line Interface
 
-ReviewChain runs locally and integrates seamlessly with Git repositories. A single command triggers the full review pipeline.
+ReviewChain runs locally and integrates easily with Git repositories. A single command triggers the full review pipeline.
 
 <img width="1032" height="544" alt="user_experience" src="https://github.com/user-attachments/assets/d7e64d18-9ed3-4997-8c43-c7eec8e5c753" />
 
