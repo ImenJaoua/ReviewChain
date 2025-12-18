@@ -3,6 +3,8 @@ from chat_env import ChatEnv, ChatEnvConfig
 from phase import ReviewPhase
 
 def main(initial_code=None):
+    print("🚀 Starting ReviewChain System...\n")
+
     # --- Configuration ---
     config = ChatEnvConfig(with_memory=True, test_enabled=True)
 

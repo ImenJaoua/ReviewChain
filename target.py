@@ -32,6 +32,11 @@ def add_numbers(a: float, b: float) -> float:
     """Return the sum of two numbers."""
     return a + b
 
+def function_with_type_hints(param1: int, param2: str) -> bool:
+    """A sample function demonstrating type hints."""
+    print(f"[DEBUG] param1: {param1}, param2: {param2}")
+    return str(param1) == param2
+
 
 def main():
     # Handle command-line arguments

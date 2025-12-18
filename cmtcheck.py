@@ -145,6 +145,112 @@ class DiffParser:
         
         return result
 
+
+class ColorFormatter:
+    """Utility class for adding ANSI color codes and formatting to text."""
+    
+    # ANSI color codes
+    RESET = '\033[0m'
+    RED = '\033[91m'
+    GREEN = '\033[92m'
+    CYAN = '\033[96m'
+    YELLOW = '\033[93m'
+    BLUE = '\033[94m'
+    MAGENTA = '\033[95m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+    
+    @staticmethod
+    def colorize(text, color_code):
+        """Apply a color code to text and reset afterwards."""
+        return f"{color_code}{text}{ColorFormatter.RESET}"
+    
+    @staticmethod
+    def red(text):
+        """Make text red."""
+        return ColorFormatter.colorize(text, ColorFormatter.RED)
+    
+    @staticmethod
+    def green(text):
+        """Make text green."""
+        return ColorFormatter.colorize(text, ColorFormatter.GREEN)
+    
+    @staticmethod
+    def cyan(text):
+        """Make text cyan."""
+        return ColorFormatter.colorize(text, ColorFormatter.CYAN)
+    
+    @staticmethod
+    def yellow(text):
+        """Make text yellow."""
+        return ColorFormatter.colorize(text, ColorFormatter.YELLOW)
+    
+    @staticmethod
+    def blue(text):
+        """Make text blue."""
+        return ColorFormatter.colorize(text, ColorFormatter.BLUE)
+    
+    @staticmethod
+    def magenta(text):
+        """Make text magenta."""
+        return ColorFormatter.colorize(text, ColorFormatter.MAGENTA)
+    
+    @staticmethod
+    def bold(text):
+        """Make text bold."""
+        return ColorFormatter.colorize(text, ColorFormatter.BOLD)
+    
+    @staticmethod
+    def underline(text):
+        """Make text underlined."""
+        return ColorFormatter.colorize(text, ColorFormatter.UNDERLINE)
+    
+    @staticmethod
+    def bold_cyan(text):
+        """Make text bold and cyan."""
+        return f"{ColorFormatter.BOLD}{ColorFormatter.CYAN}{text}{ColorFormatter.RESET}"
+
+
+def display_github_style_diff(diff_text, filename):
+    """
+    Display the diff in GitHub-style format with color-coded additions and deletions.
+    This function handles the specific hunk diff display logic.
+    """
+    lines = diff_text.split('\n')
+    
+    print("\n" + "=" * 80)
+    print(ColorFormatter.bold_cyan(f"📝 Detected Changes in: {filename}"))
+    print("=" * 80 + "\n")
+    
+    additions = 0
+    deletions = 0
+    
+    for line in lines:
+        if line.startswith('@@'):
+            # Hunk header - display in cyan
+            print(ColorFormatter.cyan(line))
+        elif line.startswith('+') and not line.startswith('+++'):
+            # Addition - display in green
+            print(ColorFormatter.green(line))
+            additions += 1
+        elif line.startswith('-') and not line.startswith('---'):
+            # Deletion - display in red
+            print(ColorFormatter.red(line))
+            deletions += 1
+        elif line.startswith('+++') or line.startswith('---'):
+            # File headers - display in bold
+            print(ColorFormatter.bold(line))
+        else:
+            # Context lines
+            print(line)
+    
+    # Summary
+    print("\n" + "-" * 80)
+    summary = f"{ColorFormatter.bold('Summary:')} {ColorFormatter.green(f'+{additions} additions')}, {ColorFormatter.red(f'-{deletions} deletions')}"
+    print(summary)
+    print("-" * 80 + "\n")
+
+
 def get_file_from_github(path, branch="main"):
     try:
         # Get the parent directory of the current script
@@ -203,6 +309,8 @@ def hunke_generator(old_file, updated_file):
 def apply_unified_diff(original_content, diff_text):
     """
     Apply a unified diff patch to the original content.
+    If no correlation exists between original_content and diff_text,
+    just replace the original_content with diff_text.
     """
     original_lines = original_content.splitlines(keepends=True)
     
@@ -211,6 +319,13 @@ def apply_unified_diff(original_content, diff_text):
     
     # Find the hunk header (@@)
     hunk_pattern = r'^@@ -(\d+),(\d+) \+(\d+),(\d+) @@'
+    
+    # Check if diff_text contains any hunk headers (valid unified diff)
+    has_hunks = any(re.match(hunk_pattern, line) for line in diff_lines)
+    
+    # If no hunks found, there's no correlation - just replace content
+    if not has_hunks:
+        return diff_text if diff_text.endswith('\n') or not diff_text else diff_text + '\n'
     
     result_lines = original_lines.copy()
     offset = 0  # Track line number offset as we make changes
@@ -229,6 +344,11 @@ def apply_unified_diff(original_content, diff_text):
             
             # Adjust for 0-based indexing
             old_start_idx = old_start - 1 + offset
+            
+            # Check if the hunk references are out of bounds (no correlation)
+            if old_start_idx < 0 or old_start_idx >= len(result_lines):
+                # No valid correlation, replace entire content
+                return diff_text if diff_text.endswith('\n') or not diff_text else diff_text + '\n'
             
             # Collect the new lines from this hunk
             new_lines = []
@@ -299,7 +419,13 @@ def main():
 
     code_diff = "\n".join(code_diff)
 
-    final_code = cmtcheck_main(initial_code=code_diff)
+    display_github_style_diff(code_diff, path)
+
+    print("\n" + "=" * 80)
+    print(ColorFormatter.bold_cyan(f"🚀 Review Chain Pipeline"))
+    print("=" * 80 + "\n")
+
+    final_code = cmtcheck_main(initial_code=code_diff)    
 
     parser = DiffParser()
 
@@ -307,9 +433,16 @@ def main():
 
     # Print results
     for filename, content in files.items():
-        print(f"=== {filename} ===")
+        print("\n" + "=" * 80)
+        print(ColorFormatter.bold_cyan(f"⚙️  Proposed Refinement"))
+        print("=" * 80 + "\n")
         print(content)
         print("\n")
+
+
+    print("\n" + "=" * 80)
+    print(ColorFormatter.bold_cyan(f"👤 User Decision"))
+    print("=" * 80 + "\n")
     
     # User confirmation step
     while True:
@@ -330,4 +463,3 @@ def main():
             break
         else:
             print("Invalid input. Please enter 'y' for yes or 'n' for no.")
-
