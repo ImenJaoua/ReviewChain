@@ -70,8 +70,13 @@ After cloning the repository, run the following command inside your virtual envi
 ```bash
 pip install .
 ```
+You have to run the models of each component of the system  
+(you can find them in [Zenodo]([https://zenodo.org](https://zenodo.org/records/17965114))).
 
-Once the package is installed, you can run it using the following command:
+```bash
+uvicorn backend:app --host 0.0.0.0 --port 8000
+```
+You can run ReviewChain using the following command:
 
 ```bash
 reviewchain --path "path/to/target/file" --branch "target-branch-name"
