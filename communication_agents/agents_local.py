@@ -40,22 +40,22 @@ DTYPE = torch.float16
 # ============================================================
 # Helper: safe model loader
 # ============================================================
-def load_model(model_name_or_path, device):
+def load_model(model_name_or_path):
     tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, use_fast=True)
     model = AutoModelForCausalLM.from_pretrained(
         model_name_or_path,
-        dtype=DTYPE,
-        device_map={"": device}
+        device_map="auto",
+        torch_dtype=torch.float16
     ).eval()
     return model, tokenizer
 
 # ============================================================
 # Load models
 # ============================================================
-reviewer_model, reviewer_tokenizer = load_model("models/comment_generator", REVIEWER_DEVICE)
-developer_model, developer_tokenizer = load_model("models/code_refinment", DEVELOPER_DEVICE)
-estimator_model, estimator_tokenizer = load_model("models/quality_estimator", ESTIMATOR_DEVICE)
-format_judge_model, format_judge_tokenizer = load_model("models/Meta-Llama-3-8B-Instruct",FORMAT_JUDGE_DEVICE)
+reviewer_model, reviewer_tokenizer = load_model("./models/comment_generator")
+developer_model, developer_tokenizer = load_model("./models/code_refinment")
+estimator_model, estimator_tokenizer = load_model("./models/quality_estimator")
+# format_judge_model, format_judge_tokenizer = load_model("models/Meta-Llama-3-8B-Instruct",FORMAT_JUDGE_DEVICE)
 
 # ============================================================
 # Helper: generation
@@ -185,17 +185,17 @@ def quality_estimator(code, max_new_tokens=256):
 # ============================================================
 # Format Judge (A4)
 # ============================================================
-def format_judge(comment, max_new_tokens=256):
-    user_input = judgement_quality_template.format(comment=comment.strip())
-    messages = [
-        {"role": "system", "content": judgement_quality_system_prompt},
-        {"role": "user", "content": user_input}
-    ]
+# def format_judge(comment, max_new_tokens=256):
+#     user_input = judgement_quality_template.format(comment=comment.strip())
+#     messages = [
+#         {"role": "system", "content": judgement_quality_system_prompt},
+#         {"role": "user", "content": user_input}
+#     ]
 
-    prompt = format_judge_tokenizer.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True
-    )
+#     prompt = format_judge_tokenizer.apply_chat_template(
+#         messages,
+#         tokenize=False,
+#         add_generation_prompt=True
+#     )
 
-    return generate_text(format_judge_model, format_judge_tokenizer, FORMAT_JUDGE_DEVICE, prompt, max_new_tokens)
+#     return generate_text(format_judge_model, format_judge_tokenizer, FORMAT_JUDGE_DEVICE, prompt, max_new_tokens)

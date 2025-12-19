@@ -12,7 +12,7 @@ import difflib
 
 import re
 
-from communication_agents.reviewchain_main import main as cmtcheck_main
+from reviewchain_main import main as reviewchain_main
 
 import difflib
 
@@ -258,7 +258,7 @@ def get_file_from_github(path, branch="main"):
         
         # Open the Git repository
         try:
-            repo = Repo(parent_dir)
+            repo = Repo(parent_dir,  search_parent_directories=True)
         except NoSuchPathError:
             raise FileNotFoundError(f"The repository path '{parent_dir}' does not exist.")
         except InvalidGitRepositoryError:
@@ -425,7 +425,7 @@ def main():
     print(ColorFormatter.bold_cyan(f"🚀 Review Chain Pipeline"))
     print("=" * 80 + "\n")
 
-    final_code = cmtcheck_main(initial_code=code_diff)    
+    final_code = reviewchain_main(initial_code=code_diff)    
 
     parser = DiffParser()
 

@@ -7,7 +7,7 @@ from agents_local import (
     comment_generator,
     code_refiner,
     quality_estimator,
-    format_judge
+    # format_judge
 )
 
 print("\n🔥 All models loaded in backend and ready for inference.\n")
