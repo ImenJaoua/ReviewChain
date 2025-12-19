@@ -61,7 +61,7 @@ Each stage is handled by a specialized LLM, making the system:
 
 ReviewChain runs locally and integrates easily with Git repositories. A single command triggers the full review pipeline.
 
-<img width="1032" height="544" alt="user_experience" src="https://github.com/user-attachments/assets/d7e64d18-9ed3-4997-8c43-c7eec8e5c753" />
+<img width="774" height="385" alt="user_experience" src="https://github.com/user-attachments/assets/e851c3e8-328d-44df-ac45-3820eb9365cd" />
 
 ## Installation & Setup
 
