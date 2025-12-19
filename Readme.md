@@ -61,7 +61,7 @@ Each stage is handled by a specialized LLM, making the system:
 
 ReviewChain runs locally and integrates easily with Git repositories. A single command triggers the full review pipeline.
 
-<img width="774" height="385" alt="user_experience" src="https://github.com/user-attachments/assets/e851c3e8-328d-44df-ac45-3820eb9365cd" />
+<img width="3903" height="1924" alt="user_experience" src="https://github.com/user-attachments/assets/758474d9-50fb-42dd-99b2-77928e06d666" />
 
 ## Installation & Setup
 
@@ -69,11 +69,6 @@ After cloning the repository, run the following command inside your virtual envi
 
 ```bash
 pip install .
-```
-You have to run the models of each component of the system  
-
-```bash
-uvicorn backend:app --host 0.0.0.0 --port 8000
 ```
 You can run ReviewChain using the following command:
 
