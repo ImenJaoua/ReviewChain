@@ -51,9 +51,19 @@ class ReviewPhase:
     # EXECUTION PIPELINE
     # -----------------------------
     def execute(self):
+        """
+        Run iterative dialogue between A1, A2, and A3.
+        
+        Returns:
+            tuple: (refined_code, accepted_comments)
+        """
         current_code = self.chat_env.get("code")
         print("=== INITIAL CODE ===")
         print(current_code)
+        
+        # Default values - ensure these are always defined
+        comment = None
+        proposed_code = current_code
         
         previous_feedback = None
         format_attempt_count = 0
@@ -123,14 +133,16 @@ class ReviewPhase:
                 current_code = proposed_code
                 self.chat_env.update_code(proposed_code)
                 print(proposed_code)
-                return proposed_code
+                # Return both refined code and the last accepted comment
+                return proposed_code, comment
             
             # QE rejected
             if quality_attempt_count >= self.max_quality_attempts:
                 # Force accept after limit
                 current_code = proposed_code
                 self.chat_env.update_code(proposed_code)
-                return proposed_code
+                # Return both refined code and the last comment
+                return proposed_code, comment
             
             # Retry from Phase 1
             previous_feedback = {
@@ -147,4 +159,5 @@ class ReviewPhase:
         # If we exit max_rounds without acceptance
         self.chat_env.update_code(proposed_code)
         print(proposed_code)
-        return proposed_code
+        # Return both refined code and the last comment
+        return proposed_code, comment
