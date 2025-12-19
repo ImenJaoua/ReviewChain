@@ -35,10 +35,7 @@ def function_with_type_hints(param1: int, param2: str) -> bool:
     print(f"[DEBUG] param1: {param1}, param2: {param2}")
     return str(param1) == param2
 
-def function_with_type_hints_and_return(param1: int, param2: str) -> bool:
-    """A sample function demonstrating type hints."""
-    print(f"[DEBUG] param1: {param1}, param2: {param2}")
-    return str(param1) == param2
+
 
 def main():
     # Handle command-line arguments
