@@ -10,7 +10,18 @@ def main(initial_code=None):
 
     # --- Run one review phase ---
     phase = ReviewPhase(chat_env, max_rounds=3)
-    final_code = phase.execute()
+    final_code, final_comment = phase.execute()
+
+    print("\n" + "=" * 80)
+
+    BOLD_CYAN = "\033[1;36m"
+    RESET = "\033[0m"
+
+    print(f"{BOLD_CYAN}\n📝 Final Accepted Comment:\n{RESET}")
+
+    print("=" * 80 + "\n")
+
+    print(final_comment)
 
     print("\n✅ ReviewChain session complete.")
 
