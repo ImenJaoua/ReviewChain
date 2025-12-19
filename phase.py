@@ -1,4 +1,3 @@
-# phase.py
 from chat_env import ChatEnv
 from agents_local import comment_generator, code_refiner
 
@@ -14,10 +13,19 @@ class ReviewPhase:
         self.max_rounds = max_rounds
 
     def execute(self):
-        """Run iterative dialogue between A1 and A2."""
+        """
+        Run iterative dialogue between A1 and A2.
+        
+        Returns:
+            tuple: (refined_code, accepted_comment)
+        """
         code = self.chat_env.get("code")
+        
+        # Default values - ensure these are always defined
+        comments = None
+        refined_code = code
 
-        print(" Code : ",code)
+        print("Code:", code)
 
         for round_id in range(self.max_rounds):
             print(f"\n=== ROUND {round_id + 1} ===")
@@ -34,8 +42,11 @@ class ReviewPhase:
             self.chat_env.update_code(refined_code)
             self.chat_env.append_history("Developer", refined_code)
             print("\n🧑‍💻 Developer:\n", refined_code)
-
-
+            
+            # Update code for next iteration
+            code = refined_code
 
         print("\n📄 Final Code:\n", self.chat_env.get_code())
-        return self.chat_env.get_code()
+        
+        # Return both refined code and the last accepted comment
+        return refined_code, comments

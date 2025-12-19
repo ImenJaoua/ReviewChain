@@ -19,9 +19,9 @@ def main(initial_code=None):
 
     print(f"{BOLD_CYAN}\n📝 Final Accepted Comment:\n{RESET}")
 
-    print("=" * 80 + "\n")
-
     print(final_comment)
+
+    print("=" * 80 + "\n")
 
     print("\n✅ ReviewChain session complete.")
 

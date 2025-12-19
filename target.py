@@ -27,6 +27,9 @@ class Greeter:
         self.name = self.name.title()
         return f"Goodbye, {self.name}! Have a great day."
 
+def function_without_type_hints(x, y):
+    """Return the product of two numbers."""
+    return x * y
 
 def add_numbers(a: float, b: float) -> float:
     """Return the sum of two numbers."""
