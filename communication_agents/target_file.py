@@ -21,6 +21,10 @@ class Greeter:
         self.name = self.name.title()
         return f"Goodbye, {self.name}! Have a great day."
 
+def function_without_type_hints(x, y):  
+    """A sample function without type hints."""
+    print(f"[DEBUG] x: {x}, y: {y}")
+    return x * y
 
 def add_numbers(a: float, b: float) -> float:
     """Return the sum of two numbers."""
