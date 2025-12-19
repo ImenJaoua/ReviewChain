@@ -71,7 +71,6 @@ After cloning the repository, run the following command inside your virtual envi
 pip install .
 ```
 You have to run the models of each component of the system  
-(you can find them in [Zenodo]([https://zenodo.org](https://zenodo.org/records/17965114))).
 
 ```bash
 uvicorn backend:app --host 0.0.0.0 --port 8000
