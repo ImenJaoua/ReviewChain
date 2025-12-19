@@ -38,13 +38,13 @@ The main advantages of Review Chain over similar tools include:
 
 ReviewChain decomposes code review into four structured stages:
 
-  1. Review Comment Generation – identifies issues and suggestions
+  1. Review Comment Generation: identifies issues and suggestions
 
-  2. Comment Format Validation – ensures comments are clear and actionable
+  2. Comment Format Validation: ensures comments are clear and actionable
 
-  3. Code Refinement – applies feedback to improve the code
+  3. Code Refinement: applies feedback to improve the code
 
-  4. Quality Estimation – decides whether further refinement is needed
+  4. Quality Estimation: decides whether further refinement is needed
 
 These stages are connected through an explicit feedback loop, allowing the system to improve outputs across multiple rounds.
 
