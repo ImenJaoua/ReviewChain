@@ -70,11 +70,6 @@ After cloning the repository, run the following command inside your virtual envi
 ```bash
 pip install .
 ```
-You have to run the models of each component of the system  
-
-```bash
-uvicorn backend:app --host 0.0.0.0 --port 8000
-```
 You can run ReviewChain using the following command:
 
 ```bash
